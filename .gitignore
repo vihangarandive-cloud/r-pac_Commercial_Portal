@@ -26,3 +26,10 @@ scratch/
 Temp/
 *.log
 *.tmp
+
+## Application secrets - copy appsettings.example.json and fill in real values
+Company.DailyReporter/appsettings.json
+
+## User-uploaded documents (not source code)
+Uploads/Imports/
+Uploads/Exports/
