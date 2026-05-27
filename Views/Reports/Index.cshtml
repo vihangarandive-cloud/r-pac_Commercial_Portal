@@ -1,0 +1,501 @@
+@model System.Collections.Generic.IEnumerable<RpacCommercial.Models.ImportShipment>
+@{
+    ViewBag.Title = "Analytics & Reports";
+    
+    // Dynamic aggregate stats based on current filtered dataset
+    var totalCount = Model.Count();
+    var totalFreight = Model.Sum(x => x.ActualFreightCost ?? 0);
+    var totalClearance = Model.Sum(x => x.ActualClearanceAmount ?? 0);
+    var approxClearance = Model.Sum(x => x.ApproximateClearanceAmount ?? 0);
+    var pendingCount = Model.Count(x => x.Status == "Pending Clearance");
+}
+
+<style>
+    .reports-stat-card {
+        padding: 1.1rem 1.25rem !important;
+        border-radius: 16px !important;
+        background: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .reports-stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06) !important;
+    }
+    .reports-stat-icon {
+        width: 46px;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+    }
+    .reports-stat-card:hover .reports-stat-icon {
+        transform: scale(1.08);
+    }
+    .reports-stat-icon i {
+        font-size: 1.4rem !important;
+    }
+    .stat-number {
+        font-size: 1.45rem !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.02em;
+    }
+    .table-compact th, .table-compact td {
+        padding: 0.6rem 0.85rem !important;
+        font-size: 0.825rem !important;
+        vertical-align: middle !important;
+    }
+    .table-compact thead th {
+        font-size: 0.725rem !important;
+        font-weight: 700 !important;
+        background-color: #f8fafc !important;
+        border-bottom: 1.5px solid #e2e8f0 !important;
+        color: #64748b !important;
+        letter-spacing: 0.05em;
+    }
+    .chart-card {
+        padding: 1.25rem !important;
+        border-radius: 16px !important;
+        transition: all 0.3s ease;
+    }
+    .chart-card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    .reports-filter-card {
+        padding: 1.25rem !important;
+        border-radius: 16px !important;
+    }
+    .grid-export-card {
+        border-radius: 16px !important;
+    }
+</style>
+
+<!-- KPI Cards row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-white reports-stat-card h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted x-small uppercase tracking-widest fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Total Shipments</span>
+                    <h4 class="mb-0 fw-black text-dark mt-1 stat-number">@totalCount</h4>
+                </div>
+                <div class="reports-stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-calendar2-range-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-white reports-stat-card h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted x-small uppercase tracking-widest fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Total Freight (USD)</span>
+                    <h4 class="mb-0 fw-black text-success mt-1 stat-number">USD @totalFreight.ToString("N2")</h4>
+                </div>
+                <div class="reports-stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-white reports-stat-card h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    @if (ViewBag.ActiveTab == "pending")
+                    {
+                        <span class="text-muted x-small uppercase tracking-widest fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Est. Clearance (LKR)</span>
+                        <h4 class="mb-0 fw-black text-warning mt-1 stat-number">LKR @approxClearance.ToString("N2")</h4>
+                    }
+                    else
+                    {
+                        <span class="text-muted x-small uppercase tracking-widest fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Total Clearance (LKR)</span>
+                        <h4 class="mb-0 fw-black text-danger mt-1 stat-number">LKR @totalClearance.ToString("N2")</h4>
+                    }
+                </div>
+                <div class="reports-stat-icon @(ViewBag.ActiveTab == "pending" ? "bg-warning bg-opacity-10 text-warning" : "bg-danger bg-opacity-10 text-danger")">
+                    <i class="bi bi-shield-fill-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-white reports-stat-card h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted x-small uppercase tracking-widest fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Pending Clearance</span>
+                    <h4 class="mb-0 fw-black text-warning mt-1 stat-number">@pendingCount</h4>
+                </div>
+                <div class="reports-stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Panel -->
+<div class="card border-0 shadow-sm bg-white reports-filter-card mb-4">
+    <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3"><i class="bi bi-funnel-fill me-1 text-danger text-opacity-75"></i>Filter Data & Generate Reports</h6>
+    
+    @using (Html.BeginForm("Index", "Reports", FormMethod.Get, new { @id = "filterForm", @class = "row g-3" }))
+    {
+        <input type="hidden" name="tab" value="@ViewBag.ActiveTab" />
+        <div class="col-md-3">
+            <label for="search" class="form-label fw-bold small text-muted mb-1">Search Query</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 8px 0 0 8px; border: 1px solid #dee2e6;"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control bg-light border-start-0" id="search" name="search" value="@ViewBag.SearchText" placeholder="Search PO, Supplier, remarks..." style="border-radius: 0 8px 8px 0; border: 1px solid #dee2e6; font-size: 0.825rem;">
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <label for="supplierId" class="form-label fw-bold small text-muted mb-1">Supplier</label>
+            <select class="form-select form-select-sm bg-light" id="supplierId" name="supplierId">
+                <option value="">All Suppliers</option>
+                @foreach (var s in (System.Collections.Generic.IEnumerable<RpacCommercial.Models.Supplier>)ViewBag.Suppliers)
+                {
+                    <option value="@s.SupplierId" @(ViewBag.SelectedSupplierId == s.SupplierId ? "selected" : "")>@s.SupplierName</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="status" class="form-label fw-bold small text-muted mb-1">Clearance Status</label>
+            <select class="form-select form-select-sm bg-light" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="Pending Clearance" @(ViewBag.SelectedStatus == "Pending Clearance" ? "selected" : "")>Pending Clearance</option>
+                <option value="Cleared" @(ViewBag.SelectedStatus == "Cleared" ? "selected" : "")>Cleared</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label for="fromDate" class="form-label fw-bold small text-muted mb-1">From Date</label>
+            <input type="date" class="form-control form-control-sm bg-light" id="fromDate" name="fromDate" value="@ViewBag.SelectedFromDate">
+        </div>
+
+        <div class="col-md-2">
+            <label for="toDate" class="form-label fw-bold small text-muted mb-1">To Date</label>
+            <input type="date" class="form-control form-control-sm bg-light" id="toDate" name="toDate" value="@ViewBag.SelectedToDate">
+        </div>
+
+        <div class="col-md-1 d-flex align-items-end gap-1">
+            <button type="submit" class="btn btn-rpac-blue btn-sm rounded-3 w-50 py-1.5 fw-bold" title="Apply Filter">
+                <i class="bi bi-search"></i>
+            </button>
+            <a href="@Url.Action("Index")" class="btn btn-light btn-sm rounded-3 w-50 py-1.5 fw-bold border text-muted" title="Reset Filters">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Charts Section -->
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm bg-white chart-card h-100">
+            <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-1.5">Shipping Mode Breakdown</h6>
+            <div class="chart-container" style="position: relative; height:190px; width:100%">
+                <canvas id="modeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm bg-white chart-card h-100">
+            <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-1.5">Air/Sea Shipment Cost (USD)</h6>
+            <div class="chart-container" style="position: relative; height:190px; width:100%">
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grid & Export Card -->
+<div class="card border-0 shadow-sm grid-export-card overflow-hidden bg-white mb-3">
+    <div class="card-header bg-white border-0 py-2.5 px-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+        <!-- Sub-Tabs inside Reports page -->
+        <ul class="nav nav-pills card-header-pills" id="reportsTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link fw-bold px-3 py-1.5 rounded-3 @(ViewBag.ActiveTab == "cleared" ? "active" : "text-secondary")" 
+                   href="@Url.Action("Index", "Reports", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, fromDate = ViewBag.SelectedFromDate, toDate = ViewBag.SelectedToDate, tab = "cleared", search = ViewBag.SearchText })">
+                    <i class="bi bi-shield-fill-check me-1"></i> Cleared Shipments
+                </a>
+            </li>
+            <li class="nav-item ms-1">
+                <a class="nav-link fw-bold px-3 py-1.5 rounded-3 @(ViewBag.ActiveTab == "pending" ? "active" : "text-secondary")" 
+                   href="@Url.Action("Index", "Reports", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, fromDate = ViewBag.SelectedFromDate, toDate = ViewBag.SelectedToDate, tab = "pending", search = ViewBag.SearchText })">
+                    <i class="bi bi-hourglass-split me-1"></i> Pending Clearance
+                </a>
+            </li>
+        </ul>
+        
+        <button onclick="triggerCsvExport()" class="btn btn-success btn-sm rounded-3 py-1.5 px-3 fw-bold border-0 bg-emerald hover-shadow">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel/CSV
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-compact mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">PO Number</th>
+                    <th>Supplier</th>
+                    <th>Shipment Requested Date</th>
+                    <th>Mode/Incoterm</th>
+                    <th>Weight</th>
+                    @if (ViewBag.ActiveTab == "pending")
+                    {
+                        <th>ETD / ETA</th>
+                        <th>Approx. Clearance Amt (LKR)</th>
+                    }
+                    else
+                    {
+                        <th>Clearance Date</th>
+                        <th>Actual Clearance Amt (LKR)</th>
+                    }
+                    <th>Freight Cost (USD)</th>
+                    <th class="pe-3">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="bi bi-journal-x fs-2 d-block mb-1 opacity-50"></i>
+                            No shipment records in filter scope.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-3 fw-bold text-dark">@item.PONumber</td>
+                            <td class="fw-semibold text-dark">
+                                @item.SupplierName
+                                @if (!string.IsNullOrEmpty(item.MaterialCategory))
+                                {
+                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                        @foreach (var cat in item.MaterialCategory.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-0.5" style="font-size: 0.6rem; font-weight: 600;">@cat.Trim()</span>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                            <td>@item.ShipmentDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-0.5" style="font-size: 0.6rem;">@item.ShippingMode</span>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-0.5" style="font-size: 0.6rem;">@item.Incoterm</span>
+                            </td>
+                            <td class="fw-semibold">@item.WeightValue @item.WeightUnit</td>
+                            
+                            @if (ViewBag.ActiveTab == "pending")
+                            {
+                                <td>
+                                    <span class="text-muted">ETD:</span> @item.ETD.ToString("yyyy-MM-dd")<br/>
+                                    <span class="text-muted">ETA:</span> @item.ETA.ToString("yyyy-MM-dd")
+                                </td>
+                                <td class="text-warning fw-bold">@(item.ApproximateClearanceAmount.HasValue ? "LKR " + item.ApproximateClearanceAmount.Value.ToString("N2") : "N/A")</td>
+                            }
+                            else
+                            {
+                                <td>@(item.ClearanceDate.HasValue ? item.ClearanceDate.Value.ToString("yyyy-MM-dd") : "N/A")</td>
+                                <td class="text-success fw-bold">@(item.ActualClearanceAmount.HasValue ? "LKR " + item.ActualClearanceAmount.Value.ToString("N2") : "N/A")</td>
+                            }
+                            
+                            <td class="fw-semibold">
+                                @(item.ActualFreightCost.HasValue ? "USD " + item.ActualFreightCost.Value.ToString("N2") : "N/A")
+                                @if (item.ActualFreightCost.HasValue && !string.IsNullOrEmpty(item.ActualFreightCostForwarder))
+                                {
+                                    <p class="text-muted text-xxs fw-bold mb-0">(@item.ActualFreightCostForwarder)</p>
+                                }
+                            </td>
+                            <td class="pe-3">
+                                <span class="badge rounded-pill px-2 py-0.5 text-uppercase text-white @(item.Status == "Cleared" ? "bg-success bg-opacity-15 text-success" : "bg-warning bg-opacity-15 text-warning")" style="font-size: 0.6rem;">
+                                    @item.Status
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@section scripts {
+    <script>
+        function triggerCsvExport() {
+            // Re-route to CSV download action with identical params
+            var params = $('#filterForm').serialize();
+            window.location.href = '@Url.Action("ExportCsv", "Reports")?' + params;
+        }
+
+        $(document).ready(function() {
+            var chartsInitialized = false;
+            function runInitCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                initCharts();
+            }
+
+            // Defer chart drawing until custom fonts are fully loaded to prevent fallback font rendering
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                document.fonts.load('10px Inter').then(function() {
+                    runInitCharts();
+                }).catch(function() {
+                    runInitCharts();
+                });
+                
+                // Fallback timeout after 500ms
+                setTimeout(runInitCharts, 500);
+            } else {
+                runInitCharts();
+            }
+
+            function initCharts() {
+                // Set global Chart.js defaults for perfect aesthetic harmony
+                Chart.defaults.font.family = 'Inter';
+                Chart.defaults.font.size = 10;
+                Chart.defaults.font.weight = '500';
+                Chart.defaults.color = '#64748b'; // Slate 500
+                
+                // Premium Slate 900 Tooltip styling
+                Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+                Chart.defaults.plugins.tooltip.titleFont = { family: 'Inter', size: 10, weight: 'bold' };
+                Chart.defaults.plugins.tooltip.bodyFont = { family: 'Inter', size: 10 };
+                Chart.defaults.plugins.tooltip.padding = 8;
+                Chart.defaults.plugins.tooltip.cornerRadius = 6;
+
+                // Render Shipping Modes Chart
+                var modeCtx = document.getElementById('modeChart').getContext('2d');
+                
+                // Map model summaries safely into JS arrays
+                var modeData = {};
+                @foreach (var m in (System.Collections.Generic.IEnumerable<dynamic>)ViewBag.ShippingModeChart)
+                {
+                    <text>modeData['@m.Label'] = @m.Value;</text>
+                }
+
+                var modeLabels = Object.keys(modeData);
+                var modeValues = Object.values(modeData);
+
+                if (modeLabels.length === 0) {
+                    modeLabels = ['No Data'];
+                    modeValues = [0];
+                }
+
+                var shippingModeColorMap = {
+                    'Air': 'rgba(225, 29, 45, 0.8)',
+                    'Courier': 'rgba(59, 130, 246, 0.8)',
+                    'Sea': 'rgba(75, 85, 99, 0.8)'
+                };
+                var modeColors = modeLabels.map(function(label) {
+                    return shippingModeColorMap[label] || '#94a3b8';
+                });
+
+                new Chart(modeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: modeLabels,
+                        datasets: [{
+                            data: modeValues,
+                            backgroundColor: modeColors,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { family: 'Inter', size: 10, weight: '500' }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+
+                // Render Shipping Mode Cost Chart
+                var costCtx = document.getElementById('costChart').getContext('2d');
+                
+                var costData = {};
+                @foreach (var c in (System.Collections.Generic.IEnumerable<dynamic>)ViewBag.ShippingModeCostChart)
+                {
+                    <text>costData['@c.Label'] = @c.Value;</text>
+                }
+
+                var costLabels = Object.keys(costData);
+                var costValues = Object.values(costData);
+
+                if (costLabels.length === 0) {
+                    costLabels = ['No Data'];
+                    costValues = [0];
+                }
+
+                var costColors = costLabels.map(function(label) {
+                    return shippingModeColorMap[label] || '#94a3b8';
+                });
+
+                new Chart(costCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: costLabels,
+                        datasets: [{
+                            label: 'Shipment Cost (USD)',
+                            data: costValues,
+                            backgroundColor: costColors,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        var val = context.raw;
+                                        return 'Cost: USD ' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString('en-US');
+                                    },
+                                    font: { family: 'Inter', size: 10, weight: '500' }
+                                }
+                            },
+                            x: { 
+                                grid: { display: false },
+                                ticks: {
+                                    font: { family: 'Inter', size: 10, weight: '500' }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

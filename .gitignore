@@ -1,0 +1,28 @@
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleasePub/
+x64/
+x86/
+build/
+bin/
+obj/
+
+## NuGet Packages
+packages/
+*.nuget.props
+*.nuget.targets
+
+## Temp/Scratch folders
+scratch/
+Temp/
+*.log
+*.tmp

@@ -1,0 +1,312 @@
+@model RpacCommercial.Models.ImportShipment
+@{
+    ViewBag.Title = "Edit Import Shipment";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mt-3">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-4">
+                        <i class="bi bi-pencil-square fs-3"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 fw-bold text-dark">Amend Import Shipment</h4>
+                        <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold">Commercial Shipment Update (PO: @Model.PONumber)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-4">
+                @if (!Html.ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger border-0 rounded-3 py-2 px-3 mb-4 d-flex align-items-center gap-2" style="background-color: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        <div class="small fw-semibold">
+                            @Html.ValidationSummary(true, "")
+                        </div>
+                    </div>
+                }
+
+                @using (Html.BeginForm("Edit", "Import", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.ImportId)
+                    @Html.HiddenFor(m => m.CreatedBy)
+                    @Html.HiddenFor(m => m.CreatedAt)
+                    @Html.HiddenFor(m => m.Status)
+                    @Html.HiddenFor(m => m.ApprovedBy)
+                    @Html.HiddenFor(m => m.ApprovedAt)
+                    @Html.HiddenFor(m => m.ScanwellQtyPath)
+                    @Html.HiddenFor(m => m.ScanwellQtyFileName)
+                    @Html.HiddenFor(m => m.FGXPath)
+                    @Html.HiddenFor(m => m.FGXFileName)
+                    @Html.HiddenFor(m => m.TranswingPath)
+                    @Html.HiddenFor(m => m.TranswingFileName)
+                    @Html.HiddenFor(m => m.InsurancePath)
+                    @Html.HiddenFor(m => m.InsuranceFileName)
+
+                    <!-- SECTION 1: Shipment Identity -->
+                    <h6 class="text-danger x-small uppercase tracking-widest fw-bold mb-4 border-bottom pb-2">1. Shipment Identity</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="ShipmentDate" class="form-label fw-bold small text-muted">Shipment Requested Date</label>
+                            <input type="date" class="form-control bg-light" id="ShipmentDate" name="ShipmentDate" value="@Model.ShipmentDate.ToString("yyyy-MM-dd")" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="PONumber" class="form-label fw-bold small text-muted">PO Number</label>
+                            <input type="text" class="form-control bg-light" id="PONumber" name="PONumber" value="@Model.PONumber" placeholder="Enter PO Number" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="SupplierId" class="form-label fw-bold small text-muted">Supplier</label>
+                            <select class="form-select bg-light" id="SupplierId" name="SupplierId" required>
+                                <option value="">Select Supplier</option>
+                                @foreach (var s in (System.Collections.Generic.IEnumerable<RpacCommercial.Models.Supplier>)ViewBag.Suppliers)
+                                {
+                                    <option value="@s.SupplierId" @(Model.SupplierId == s.SupplierId ? "selected" : "")>@s.SupplierName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-muted">Material Category</label>
+                            <div class="dropdown custom-multi-select" id="matCatDropdown">
+                                <button class="btn btn-light bg-light w-100 text-start d-flex justify-content-between align-items-center dropdown-toggle form-control shadow-none border" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" style="border-radius: 8px; min-height: 38px; padding-top: 6px; padding-bottom: 6px;">
+                                    <span class="selected-text text-muted small">Select Categories</span>
+                                </button>
+                                <ul class="dropdown-menu w-100 p-2 shadow rounded-3 border-0 mt-1" style="max-height: 250px; overflow-y: auto; font-size: 0.85rem;">
+                                    @{
+                                        var categories = new[] { "RFID", "Paper Board", "Satin Ribbon", "Ink/Chemical/Ink Foil", "Adhesive", "Consumable", "Accessories" };
+                                        foreach (var cat in categories)
+                                        {
+                                            <li>
+                                                <div class="form-check py-1 px-3 rounded hover-bg-light cursor-pointer">
+                                                    <input class="form-check-input cat-checkbox cursor-pointer" type="checkbox" value="@cat" id="cat_@cat.Replace(" ", "_").Replace("/", "_")">
+                                                    <label class="form-check-label w-100 cursor-pointer" for="cat_@cat.Replace(" ", "_").Replace("/", "_")">@cat</label>
+                                                </div>
+                                            </li>
+                                        }
+                                    }
+                                </ul>
+                                <input type="hidden" name="MaterialCategory" id="MaterialCategory" value="@Model.MaterialCategory" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Transport & Terms -->
+                    <h6 class="text-danger x-small uppercase tracking-widest fw-bold mb-4 border-bottom pb-2">2. Transport & Shipping Terms</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="ShippingMode" class="form-label fw-bold small text-muted">Shipping Mode</label>
+                            <select class="form-select bg-light" id="ShippingMode" name="ShippingMode" required>
+                                <option value="">Select Shipping Mode</option>
+                                <option value="Air" @(Model.ShippingMode == "Air" ? "selected" : "")>Air</option>
+                                <option value="Sea" @(Model.ShippingMode == "Sea" ? "selected" : "")>Sea</option>
+                                <option value="Courier" @(Model.ShippingMode == "Courier" ? "selected" : "")>Courier</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="Incoterm" class="form-label fw-bold small text-muted">Incoterm</label>
+                            <select class="form-select bg-light" id="Incoterm" name="Incoterm" required>
+                                <option value="">Select Incoterm</option>
+                                <option value="FOB" @(Model.Incoterm == "FOB" ? "selected" : "")>FOB</option>
+                                <option value="CIF" @(Model.Incoterm == "CIF" ? "selected" : "")>CIF</option>
+                                <option value="Ex Work" @(Model.Incoterm == "Ex Work" ? "selected" : "")>Ex Work</option>
+                                <option value="C&F" @(Model.Incoterm == "C&F" ? "selected" : "")>C&F</option>
+                                <option value="DAP" @(Model.Incoterm == "DAP" ? "selected" : "")>DAP</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="insuranceFile" class="form-label fw-bold small text-muted d-flex justify-content-between">
+                                <span>Insurance Attachment</span>
+                                @if (!string.IsNullOrEmpty(Model.InsurancePath))
+                                {
+                                    bool isMsg = Model.InsurancePath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                    <a href="@Url.Content(Model.InsurancePath)" class="text-info x-small fw-bold" download="@(string.IsNullOrEmpty(Model.InsuranceFileName) ? "" : Model.InsuranceFileName)" target="_blank">
+                                        <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
+                                    </a>
+                                }
+                            </label>
+                            <input type="file" class="form-control bg-light" id="insuranceFile" name="insuranceFile" accept=".msg,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                            <span class="x-small text-muted italic">Upload new file (.msg, .pdf, etc.) to replace current</span>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="WeightValue" class="form-label fw-bold small text-muted">Shipment Weight / Volume</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control bg-light" id="WeightValue" name="WeightValue" value="@Model.WeightValue.ToString("0.00")" placeholder="Weight/Volume Value" required>
+                                <select class="form-select bg-light" id="WeightUnit" name="WeightUnit" required style="max-width: 100px;">
+                                    <option value="Kg" @(Model.WeightUnit == "Kg" ? "selected" : "")>Kg</option>
+                                    <option value="CBM" @(Model.WeightUnit == "CBM" ? "selected" : "")>CBM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: Forwarder Email Attachments -->
+                    <h6 class="text-danger x-small uppercase tracking-widest fw-bold mb-4 border-bottom pb-2">3. Forwarder Attachments (Select from Dropdown, then upload Email Attachment)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="scanwellQtyFile" class="form-label fw-bold small text-muted d-flex justify-content-between">
+                                <span>Scanwell Qty Attachment</span>
+                                @if (!string.IsNullOrEmpty(Model.ScanwellQtyPath))
+                                {
+                                    bool isMsg = Model.ScanwellQtyPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                    <a href="@Url.Content(Model.ScanwellQtyPath)" class="text-primary x-small fw-bold" download="@(string.IsNullOrEmpty(Model.ScanwellQtyFileName) ? "" : Model.ScanwellQtyFileName)" target="_blank">
+                                        <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
+                                    </a>
+                                }
+                            </label>
+                            <input type="file" class="form-control bg-light" id="scanwellQtyFile" name="scanwellQtyFile" accept=".msg,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                            <span class="x-small text-muted italic">Upload new file (.msg, .pdf, etc.) to replace current</span>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="egxFile" class="form-label fw-bold small text-muted d-flex justify-content-between">
+                                <span>EGX Attachment</span>
+                                @if (!string.IsNullOrEmpty(Model.FGXPath))
+                                {
+                                    bool isMsg = Model.FGXPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                    <a href="@Url.Content(Model.FGXPath)" class="text-success x-small fw-bold" download="@(string.IsNullOrEmpty(Model.FGXFileName) ? "" : Model.FGXFileName)" target="_blank">
+                                        <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
+                                    </a>
+                                }
+                            </label>
+                            <input type="file" class="form-control bg-light" id="egxFile" name="egxFile" accept=".msg,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                            <span class="x-small text-muted italic">Upload new file (.msg, .pdf, etc.) to replace current</span>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="transwingFile" class="form-label fw-bold small text-muted d-flex justify-content-between">
+                                <span>Transwing Attachment</span>
+                                @if (!string.IsNullOrEmpty(Model.TranswingPath))
+                                {
+                                    bool isMsg = Model.TranswingPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                    <a href="@Url.Content(Model.TranswingPath)" class="text-warning x-small fw-bold" download="@(string.IsNullOrEmpty(Model.TranswingFileName) ? "" : Model.TranswingFileName)" target="_blank">
+                                        <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
+                                    </a>
+                                }
+                            </label>
+                            <input type="file" class="form-control bg-light" id="transwingFile" name="transwingFile" accept=".msg,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                            <span class="x-small text-muted italic">Upload new file (.msg, .pdf, etc.) to replace current</span>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 4: Important Dates & Costs -->
+                    <h6 class="text-danger x-small uppercase tracking-widest fw-bold mb-4 border-bottom pb-2">4. Chronology & Clearance Costs</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="ETD" class="form-label fw-bold small text-muted">ETD (Departure Date)</label>
+                            <input type="date" class="form-control bg-light" id="ETD" name="ETD" value="@Model.ETD.ToString("yyyy-MM-dd")" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ETA" class="form-label fw-bold small text-muted">ETA (Arrival Date)</label>
+                            <input type="date" class="form-control bg-light" id="ETA" name="ETA" value="@Model.ETA.ToString("yyyy-MM-dd")" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ActualFreightCost" class="form-label fw-bold small text-muted">Actual Freight Cost (USD)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control bg-light" id="ActualFreightCost" name="ActualFreightCost" value="@(Model.ActualFreightCost.HasValue ? Model.ActualFreightCost.Value.ToString("0.00") : "")" placeholder="Freight Cost amount">
+                                <select class="form-select bg-light" id="ActualFreightCostForwarder" name="ActualFreightCostForwarder" style="max-width: 120px;">
+                                    <option value="" @(string.IsNullOrEmpty(Model.ActualFreightCostForwarder) ? "selected" : "")>Forwarder</option>
+                                    <option value="Scanwell" @(Model.ActualFreightCostForwarder == "Scanwell" ? "selected" : "")>Scanwell</option>
+                                    <option value="EGX" @(Model.ActualFreightCostForwarder == "EGX" ? "selected" : "")>EGX</option>
+                                    <option value="Transwing" @(Model.ActualFreightCostForwarder == "Transwing" ? "selected" : "")>Transwing</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="ApproximateFreightCost" class="form-label fw-bold small text-muted">Approximate Freight Cost (USD)</label>
+                            <input type="number" step="0.01" class="form-control bg-light" id="ApproximateFreightCost" name="ApproximateFreightCost" value="@(Model.ApproximateFreightCost.HasValue ? Model.ApproximateFreightCost.Value.ToString("0.00") : "")" placeholder="Approx. freight cost">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ApproximateClearanceAmount" class="form-label fw-bold small text-muted">Approximate Clearance Amount (LKR)</label>
+                            <input type="number" step="0.01" class="form-control bg-light" id="ApproximateClearanceAmount" name="ApproximateClearanceAmount" value="@(Model.ApproximateClearanceAmount.HasValue ? Model.ApproximateClearanceAmount.Value.ToString("0.00") : "")" placeholder="Approximate clearance amount">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ClearanceDate" class="form-label fw-bold small text-muted">Clearance Date</label>
+                            <input type="date" class="form-control bg-light" id="ClearanceDate" name="ClearanceDate" value="@(Model.ClearanceDate.HasValue ? Model.ClearanceDate.Value.ToString("yyyy-MM-dd") : "")" @(Model.Status == "Pending Clearance" ? "disabled" : "") placeholder="Locked until cleared">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ActualClearanceAmount" class="form-label fw-bold small text-muted">Actual Clearance Amount (LKR)</label>
+                            <input type="number" step="0.01" class="form-control bg-light" id="ActualClearanceAmount" name="ActualClearanceAmount" value="@(Model.ActualClearanceAmount.HasValue ? Model.ActualClearanceAmount.Value.ToString("0.00") : "")" @(Model.Status == "Pending Clearance" ? "disabled" : "") placeholder="Locked until cleared">
+                        </div>
+                    </div>
+
+                    <!-- SECTION 5: Remarks -->
+                    <h6 class="text-danger x-small uppercase tracking-widest fw-bold mb-3 border-bottom pb-2">5. Additional Remarks</h6>
+                    <div class="mb-4">
+                        <label for="Remarks" class="form-label fw-bold small text-muted">Remarks</label>
+                        <textarea class="form-control bg-light" id="Remarks" name="Remarks" rows="3" placeholder="Enter comments or special shipping instructions...">@Model.Remarks</textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-3 pt-3 border-top justify-content-end">
+                        <a href="@Url.Action("Index")" class="btn btn-light rounded-3 px-4 py-2 fw-bold text-muted border">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel & Return
+                        </a>
+                        <button type="submit" class="btn btn-rpac-red rounded-3 px-5 py-2 fw-bold">
+                            <i class="bi bi-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function() {
+            var dropdown = $('#matCatDropdown');
+            var checkboxes = dropdown.find('.cat-checkbox');
+            var selectedText = dropdown.find('.selected-text');
+            var hiddenInput = $('#MaterialCategory');
+
+            function updateSelection() {
+                var selected = [];
+                checkboxes.filter(':checked').each(function() {
+                    selected.push($(this).val());
+                });
+
+                if (selected.length === 0) {
+                    selectedText.html('Select Categories').addClass('text-muted');
+                    hiddenInput.val('');
+                } else {
+                    var pillsHtml = selected.map(function(val) {
+                        return '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 me-1 px-2 py-1" style="font-size: 0.7rem; font-weight: 600;">' + val + '</span>';
+                    }).join('');
+                    selectedText.html(pillsHtml).removeClass('text-muted');
+                    hiddenInput.val(selected.join(','));
+                }
+            }
+
+            // Initialize from loaded value
+            var initialVal = hiddenInput.val();
+            if (initialVal) {
+                var selectedArray = initialVal.split(',').map(function(item) { return item.trim(); });
+                checkboxes.each(function() {
+                    if (selectedArray.indexOf($(this).val()) !== -1) {
+                        $(this).prop('checked', true);
+                    }
+                });
+                updateSelection();
+            }
+
+            checkboxes.on('change', function() {
+                updateSelection();
+            });
+
+            // Prevent dropdown from closing when clicking inside item list
+            dropdown.find('.dropdown-menu').on('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Allow clicking the label/row to toggle checkbox
+            dropdown.find('.form-check').on('click', function(e) {
+                if ($(e.target).is('input')) return;
+                var cb = $(this).find('.cat-checkbox');
+                cb.prop('checked', !cb.prop('checked')).trigger('change');
+            });
+        });
+    </script>
+}

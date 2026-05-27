@@ -1,0 +1,443 @@
+@{
+    ViewBag.Title = "Master Data Management";
+    var suppliers = (System.Collections.Generic.IEnumerable<RpacCommercial.Models.Supplier>)ViewBag.Suppliers;
+    var users = (System.Collections.Generic.IEnumerable<RpacCommercial.Models.UserAccount>)ViewBag.Users;
+    var userRole = RpacCommercial.Helpers.SessionHelper.UserRole;
+}
+
+<div class="row">
+    <div class="col-12 mt-3">
+        <!-- Display alert messages -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success border-0 rounded-3 py-3 px-4 mb-4 d-flex align-items-center gap-2 shadow-sm" style="background-color: rgba(16, 185, 129, 0.1); color: #059669;">
+                <i class="bi bi-check-circle-fill fs-5"></i>
+                <span class="small fw-semibold">@TempData["SuccessMessage"]</span>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger border-0 rounded-3 py-3 px-4 mb-4 d-flex align-items-center gap-2 shadow-sm" style="background-color: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <span class="small fw-semibold">@TempData["ErrorMessage"]</span>
+            </div>
+        }
+
+        <!-- Master Data Control Card -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-4">
+                            <i class="bi bi-database-fill-gear fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0 fw-bold text-dark">Master Data & Configurations</h4>
+                            <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold">Manage Suppliers and System Accounts</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs header -->
+                <ul class="nav nav-tabs border-bottom-0 mt-3" id="masterDataTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-muted border-0 pb-3 px-4 position-relative" 
+                                id="suppliers-tab" data-bs-toggle="tab" data-bs-target="#suppliers-pane" 
+                                type="button" role="tab" aria-controls="suppliers-pane" aria-selected="true">
+                            <i class="bi bi-truck me-2"></i>Suppliers Directory
+                        </button>
+                    </li>
+                    @if (userRole == "Admin" || userRole == "Management" || userRole == "Manager")
+                    {
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold text-muted border-0 pb-3 px-4 position-relative" 
+                                    id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" 
+                                    type="button" role="tab" aria-controls="users-pane" aria-selected="false">
+                                <i class="bi bi-people-fill me-2"></i>System Users
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="card-body p-4 bg-light bg-opacity-35">
+                <div class="tab-content" id="masterDataTabContent">
+                    
+                    <!-- TAB 1: Suppliers Directory -->
+                    <div class="tab-pane fade show active animate-fade-in" id="suppliers-pane" role="tabpanel" aria-labelledby="suppliers-tab" tabindex="0">
+                        <div class="d-flex align-items-center mb-3 gap-3">
+                            <div class="flex-shrink-0">
+                                <h6 class="mb-0 fw-bold text-dark">Suppliers Directory</h6>
+                                <p class="text-muted x-small mb-0">System imports dropdown data sources</p>
+                            </div>
+                            <div class="flex-grow-1 d-flex justify-content-center">
+                                <div class="input-group" style="max-width: 420px;">
+                                    <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 0.5rem 0 0 0.5rem;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" id="supplierSearchBox" class="form-control border-start-0 bg-white small" 
+                                           placeholder="Search by BP Code or BP Name..." 
+                                           oninput="filterSuppliers(this.value)"
+                                           style="border-radius: 0 0.5rem 0.5rem 0;">
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <button class="btn btn-rpac-red rounded-3 py-2 px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Supplier
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive rounded-3 bg-white shadow-sm border overflow-hidden">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light text-muted x-small uppercase tracking-wider">
+                                    <tr>
+                                        <th class="ps-4">BP Code</th>
+                                        <th>BP Name</th>
+                                        <th>Status</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small" id="suppliersTableBody">
+                                    @if (!suppliers.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5 text-muted">
+                                                <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-50"></i>
+                                                No suppliers configured in system.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var s in suppliers)
+                                        {
+                                            <tr class="supplier-row">
+                                                <td class="ps-4 fw-bold text-muted">@s.BPCode</td>
+                                                <td class="fw-bold text-dark">@s.SupplierName</td>
+                                                <td>
+                                                    <span class="badge rounded-pill px-2.5 py-1 text-uppercase text-white @(s.IsActive ? "bg-success bg-opacity-15 text-success" : "bg-danger bg-opacity-15 text-danger")" style="font-size: 0.65rem;">
+                                                        @(s.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-light border rounded-3 px-2 py-1.5 me-1" 
+                                                            onclick="openEditSupplierModal(@s.SupplierId, '@Html.Raw(HttpUtility.JavaScriptStringEncode(s.BPCode))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(s.SupplierName))')" 
+                                                            title="Edit Details">
+                                                        <i class="bi bi-pencil-fill text-dark"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm @(s.IsActive ? "btn-outline-danger" : "btn-outline-success") rounded-3 px-2 py-1.5" 
+                                                            onclick="toggleSupplierStatus(@s.SupplierId)" 
+                                                            title="@(s.IsActive ? "Deactivate" : "Activate")">
+                                                        <i class="bi @(s.IsActive ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        <tr id="supplierNoResults" style="display:none;">
+                                            <td colspan="4" class="text-center py-5 text-muted">
+                                                <i class="bi bi-search fs-1 d-block mb-2 opacity-40"></i>
+                                                <span class="fw-semibold">No suppliers match your search.</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (userRole == "Admin" || userRole == "Management" || userRole == "Manager")
+                    {
+                        <!-- TAB 2: System Users -->
+                        <div class="tab-pane fade animate-fade-in" id="users-pane" role="tabpanel" aria-labelledby="users-tab" tabindex="0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark">Registered Users</h6>
+                                <p class="text-muted x-small mb-0">System user profiles with plain-text passwords</p>
+                            </div>
+                            <button class="btn btn-rpac-red rounded-3 py-2 px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                                <i class="bi bi-person-plus me-1"></i> Create User Account
+                            </button>
+                        </div>
+
+                        <div class="table-responsive rounded-3 bg-white shadow-sm border overflow-hidden">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light text-muted x-small uppercase tracking-wider">
+                                    <tr>
+                                        <th class="ps-4">Full Name</th>
+                                        <th>Username</th>
+                                        <th>Plain Password (DB Clear Text)</th>
+                                        <th>User Role</th>
+                                        <th>Status</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    @if (!users.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="6" class="text-center py-5 text-muted">
+                                                <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-50"></i>
+                                                No user accounts found in directory.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var u in users)
+                                        {
+                                            <tr>
+                                                <td class="ps-4 fw-bold text-dark">@u.FullName</td>
+                                                <td class="fw-semibold">@u.Username</td>
+                                                <td>
+                                                    <code class="px-2 py-1 bg-light text-danger rounded border fw-bold">@u.Password</code>
+                                                </td>
+                                                <td>
+                                                    <span class="badge rounded-pill px-2.5 py-1 text-uppercase bg-secondary bg-opacity-15 text-secondary text-white" style="font-size: 0.65rem;">
+                                                        @u.RoleName
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge rounded-pill px-2.5 py-1 text-uppercase text-white @(u.IsActive ? "bg-success bg-opacity-15 text-success" : "bg-danger bg-opacity-15 text-danger")" style="font-size: 0.65rem;">
+                                                        @(u.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-light border rounded-3 px-2 py-1.5 me-1" 
+                                                            onclick="openEditUserModal(@u.UserId, '@Html.Raw(HttpUtility.JavaScriptStringEncode(u.FullName))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(u.Username))', '@Html.Raw(HttpUtility.JavaScriptStringEncode(u.Password))', @u.RoleId)" 
+                                                            title="Edit Details">
+                                                        <i class="bi bi-pencil-fill text-dark"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success") rounded-3 px-2 py-1.5" 
+                                                            onclick="toggleUserStatus('@u.Username')" 
+                                                            title="@(u.IsActive ? "Deactivate" : "Activate")">
+                                                        <i class="bi @(u.IsActive ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Modals {
+    <!-- MODAL: Add Supplier -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="fw-bold text-dark mt-2" id="addSupplierModalLabel"><i class="bi bi-truck me-2 text-danger"></i>Add Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 pt-2">
+                    @using (Html.BeginForm("AddSupplier", "MasterData", FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label for="newBPCode" class="form-label fw-bold small text-muted">BP Code</label>
+                            <input type="text" class="form-control bg-light" id="newBPCode" name="BPCode" required placeholder="e.g. V-L0001">
+                        </div>
+                        <div class="mb-3">
+                            <label for="newSupplierName" class="form-label fw-bold small text-muted">BP Name</label>
+                            <input type="text" class="form-control bg-light" id="newSupplierName" name="SupplierName" required placeholder="e.g. DHL Global Forwarding">
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end pt-3">
+                            <button type="button" class="btn btn-light rounded-3 fw-bold border text-muted px-4" data-bs-toggle="modal">Cancel</button>
+                            <button type="submit" class="btn btn-rpac-red rounded-3 fw-bold px-4">Save Supplier</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Supplier -->
+    <div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="fw-bold text-dark mt-2" id="editSupplierModalLabel"><i class="bi bi-pencil-fill me-2 text-danger"></i>Amend Supplier Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 pt-2">
+                    @using (Html.BeginForm("EditSupplier", "MasterData", FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="editSupplierId" name="SupplierId" />
+                        <div class="mb-3">
+                            <label for="editBPCode" class="form-label fw-bold small text-muted">BP Code</label>
+                            <input type="text" class="form-control bg-light" id="editBPCode" name="BPCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSupplierName" class="form-label fw-bold small text-muted">BP Name</label>
+                            <input type="text" class="form-control bg-light" id="editSupplierName" name="SupplierName" required>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end pt-3">
+                            <button type="button" class="btn btn-light rounded-3 fw-bold border text-muted px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-rpac-red rounded-3 fw-bold px-4">Update Details</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (userRole == "Admin" || userRole == "Management" || userRole == "Manager")
+    {
+        <!-- MODAL: Add User -->
+        <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow-lg">
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h5 class="fw-bold text-dark mt-2" id="addUserModalLabel"><i class="bi bi-person-plus-fill me-2 text-danger"></i>Create User Account</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 pt-2">
+                        @using (Html.BeginForm("AddUser", "MasterData", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label for="newUserFullName" class="form-label fw-bold small text-muted">Full Name</label>
+                                <input type="text" class="form-control bg-light" id="newUserFullName" name="FullName" required placeholder="">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newUserUsername" class="form-label fw-bold small text-muted">Username</label>
+                                <input type="text" class="form-control bg-light" id="newUserUsername" name="Username" required placeholder="">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newUserPassword" class="form-label fw-bold small text-muted">Plain-text Password (No Hashing)</label>
+                                <input type="text" class="form-control bg-light font-monospace" id="newUserPassword" name="Password" required placeholder="Enter plain text password">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newUserRoleId" class="form-label fw-bold small text-muted">System User Role</label>
+                                <select class="form-select bg-light" id="newUserRoleId" name="RoleId" required>
+                                    <option value="1">Admin</option>
+                                    <option value="2">Management</option>
+                                    <option value="3" selected>Commercial User</option>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end pt-3">
+                                <button type="button" class="btn btn-light rounded-3 fw-bold border text-muted px-4" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-rpac-red rounded-3 fw-bold px-4">Create Account</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Edit User -->
+        <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow-lg">
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h5 class="fw-bold text-dark mt-2" id="editUserModalLabel"><i class="bi bi-pencil-fill me-2 text-danger"></i>Amend User Account</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 pt-2">
+                        @using (Html.BeginForm("EditUser", "MasterData", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" id="editUserId" name="UserId" />
+                            <div class="mb-3">
+                                <label for="editUserFullName" class="form-label fw-bold small text-muted">Full Name</label>
+                                <input type="text" class="form-control bg-light" id="editUserFullName" name="FullName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editUserUsername" class="form-label fw-bold small text-muted">Username</label>
+                                <input type="text" class="form-control bg-light" id="editUserUsername" name="Username" required readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editUserPassword" class="form-label fw-bold small text-muted">Plain Password (Direct Database Edit)</label>
+                                <input type="text" class="form-control bg-light font-monospace" id="editUserPassword" name="Password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editUserRoleId" class="form-label fw-bold small text-muted">System User Role</label>
+                                <select class="form-select bg-light" id="editUserRoleId" name="RoleId" required>
+                                    <option value="1">Admin</option>
+                                    <option value="2">Management (Manager)</option>
+                                    <option value="3">Commercial User</option>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end pt-3">
+                                <button type="button" class="btn btn-light rounded-3 fw-bold border text-muted px-4" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-rpac-red rounded-3 fw-bold px-4">Save Changes</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@section scripts {
+    <script>
+        // Supplier search/filter
+        function filterSuppliers(query) {
+            var q = query.trim().toLowerCase();
+            var rows = document.querySelectorAll('#suppliersTableBody .supplier-row');
+            var visibleCount = 0;
+            rows.forEach(function(row) {
+                var bpCode = (row.cells[0] ? row.cells[0].textContent : '').toLowerCase();
+                var bpName = (row.cells[1] ? row.cells[1].textContent : '').toLowerCase();
+                var match = q === '' || bpCode.indexOf(q) !== -1 || bpName.indexOf(q) !== -1;
+                row.style.display = match ? '' : 'none';
+                if (match) visibleCount++;
+            });
+            var noResults = document.getElementById('supplierNoResults');
+            if (noResults) {
+                noResults.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+        }
+
+        // Supplier helpers
+        function openEditSupplierModal(id, bpCode, name) {
+            $('#editSupplierId').val(id);
+            $('#editBPCode').val(bpCode);
+            $('#editSupplierName').val(name);
+            $('#editSupplierModal').modal('show');
+        }
+
+        function toggleSupplierStatus(id) {
+            $.post('@Url.Action("ToggleSupplier", "MasterData")', { id: id }, function(res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            });
+        }
+
+        // User helpers
+        function openEditUserModal(userId, fullName, username, password, roleId) {
+            $('#editUserId').val(userId);
+            $('#editUserFullName').val(fullName);
+            $('#editUserUsername').val(username);
+            $('#editUserPassword').val(password);
+            $('#editUserRoleId').val(roleId);
+            $('#editUserModal').modal('show');
+        }
+
+        function toggleUserStatus(username) {
+            $.post('@Url.Action("ToggleUser", "MasterData")', { username: username }, function(res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            });
+        }
+
+        $(document).ready(masterDataTabs);
+    </script>
+}

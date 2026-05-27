@@ -1,0 +1,583 @@
+@{
+    ViewBag.Title = "Commercial Dashboard";
+    var userRole = RpacCommercial.Helpers.SessionHelper.UserRole;
+}
+
+<style>
+    .dashboard-stat-card {
+        padding: 1.1rem 1.25rem !important;
+        border-radius: 16px !important;
+        background: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .dashboard-stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06) !important;
+    }
+    .dashboard-stat-icon {
+        width: 46px;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+    }
+    .dashboard-stat-card:hover .dashboard-stat-icon {
+        transform: scale(1.08);
+    }
+    .dashboard-stat-icon i {
+        font-size: 1.4rem !important;
+    }
+    .stat-number {
+        font-size: 1.45rem !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.02em;
+    }
+    .table-compact th, .table-compact td {
+        padding: 0.6rem 0.85rem !important;
+        font-size: 0.825rem !important;
+        vertical-align: middle !important;
+    }
+    .table-compact thead th {
+        font-size: 0.725rem !important;
+        font-weight: 700 !important;
+        background-color: #f8fafc !important;
+        border-bottom: 1.5px solid #e2e8f0 !important;
+        color: #64748b !important;
+        letter-spacing: 0.05em;
+    }
+    .chart-card {
+        padding: 1.25rem !important;
+        border-radius: 16px !important;
+        transition: all 0.3s ease;
+    }
+    .chart-card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    .recent-activity-card {
+        border-radius: 16px !important;
+    }
+</style>
+
+<!-- Month Selection Widget -->
+<div class="card border-0 shadow-sm bg-white p-4 mb-4" style="border-radius: 16px !important;">
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+        <div>
+            <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-calendar3 text-danger text-opacity-75"></i>
+                Shipments Scoped for&nbsp;<span class="text-primary fw-extrabold">@ViewBag.SelectedMonthName</span>
+            </h5>
+            <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold mt-1.5" style="letter-spacing: 0.05em;">
+                      Showing @ViewBag.TotalClearedCount cleared shipments in @ViewBag.SelectedMonthName
+            </p>
+        </div>
+        
+        <div class="d-flex align-items-center gap-2">
+            <!-- Left Chevron Arrow (Rewind) -->
+            <a href="@Url.Action("Index", "Dashboard", new { month = ViewBag.PrevMonth })" 
+               class="btn btn-outline-secondary border-0 rounded-circle p-2 hover-bg-light transition-all d-flex align-items-center justify-content-center" 
+               style="width: 38px; height: 38px;"
+               title="Previous Month">
+               <i class="bi bi-chevron-left fs-5"></i>
+            </a>
+            
+            <!-- Month Dropdown Selector -->
+            <select id="monthSelector" class="form-select border-1 rounded-3 px-3 py-1.5 fw-semibold" style="width: 200px; font-size: 0.9rem;">
+                @foreach (var m in (System.Collections.Generic.List<SelectListItem>)ViewBag.MonthYearList)
+                {
+                    <option value="@m.Value" @(m.Selected ? "selected" : "")>@m.Text</option>
+                }
+            </select>
+            
+            <!-- Right Chevron Arrow (Fast Forward) -->
+            <a href="@Url.Action("Index", "Dashboard", new { month = ViewBag.NextMonth })" 
+               class="btn btn-outline-secondary border-0 rounded-circle p-2 hover-bg-light transition-all d-flex align-items-center justify-content-center" 
+               style="width: 38px; height: 38px;"
+               title="Next Month">
+               <i class="bi bi-chevron-right fs-5"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics Grid -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
+    <!-- Card 1: Cleared in Month -->
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-white dashboard-stat-card h-100" style="border-left: 4px solid #3b82f6 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                        <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-0" style="font-size: 0.65rem; letter-spacing: 0.05em;">Cleared in Month</h6>
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-1.5 py-0.5" style="font-size: 0.5rem; text-transform: uppercase; line-height: 1;">
+                            MONTH
+                        </span>
+                    </div>
+                    <h4 class="mb-0 fw-black text-dark stat-number mt-1">@ViewBag.TotalClearedCount</h4>
+                </div>
+                <div class="dashboard-stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card 2: Pending Clearance (Overall) -->
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-white dashboard-stat-card h-100" style="border-left: 4px solid #f59e0b !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                        <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-0" style="font-size: 0.65rem; letter-spacing: 0.05em;">Pending Clearance</h6>
+                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-1.5 py-0.5" style="font-size: 0.5rem; text-transform: uppercase; line-height: 1;">
+                            OVERALL
+                        </span>
+                    </div>
+                    <h4 class="mb-0 fw-black text-warning stat-number mt-1">@ViewBag.PendingClearanceCount</h4>
+                </div>
+                <div class="dashboard-stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Total Logged (Overall) -->
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-white dashboard-stat-card h-100" style="border-left: 4px solid #6366f1 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                        <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-0" style="font-size: 0.65rem; letter-spacing: 0.05em;">Total Logged</h6>
+                        <span class="badge bg-indigo bg-opacity-10 text-indigo rounded-pill px-1.5 py-0.5" style="font-size: 0.5rem; text-transform: uppercase; line-height: 1;">
+                            OVERALL
+                        </span>
+                    </div>
+                    <h4 class="mb-0 fw-black text-indigo stat-number mt-1">@ViewBag.TotalCount</h4>
+                </div>
+                <div class="dashboard-stat-icon bg-indigo bg-opacity-10 text-indigo">
+                    <i class="bi bi-layers-half"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Clearance Cost (Month) -->
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-white dashboard-stat-card h-100" style="border-left: 4px solid #10b981 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                        <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-0" style="font-size: 0.65rem; letter-spacing: 0.05em;">Clearance Cost</h6>
+                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-1.5 py-0.5" style="font-size: 0.5rem; text-transform: uppercase; line-height: 1;">
+                            MONTH
+                        </span>
+                    </div>
+                    <h4 class="mb-0 fw-black text-dark stat-number mt-1" style="font-size: 1.05rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">LKR @(ViewBag.MonthlyClearance.ToString("N2"))</h4>
+                </div>
+                <div class="dashboard-stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 5: Freight Cost (Month) -->
+    <div class="col">
+        <div class="card border-0 shadow-sm bg-white dashboard-stat-card h-100" style="border-left: 4px solid #10b981 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-1.5 mb-1.5">
+                        <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-0" style="font-size: 0.65rem; letter-spacing: 0.05em;">Freight Cost</h6>
+                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-1.5 py-0.5" style="font-size: 0.5rem; text-transform: uppercase; line-height: 1;">
+                            MONTH
+                        </span>
+                    </div>
+                    <h4 class="mb-0 fw-black text-success stat-number mt-1" style="font-size: 1.05rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">USD @(ViewBag.MonthlyFreight.ToString("N2"))</h4>
+                </div>
+                <div class="dashboard-stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-truck"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Charts Row -->
+<div class="row g-2 mb-3">
+    <!-- Chart 1: No of Shipments by Mode -->
+    <div class="col-lg-3 col-md-12">
+        <div class="card border-0 shadow-sm bg-white chart-card d-flex flex-column align-items-center justify-content-center text-center p-3" style="min-height: 280px;">
+            <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3 w-100 text-start">No of Shipments by Mode</h6>
+            @if (ViewBag.TotalClearedCount > 0)
+            {
+                <div style="height: 200px; width: 100%; position: relative;">
+                    <canvas id="modeChart"></canvas>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center my-auto">
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                        <i class="bi bi-pie-chart text-muted" style="font-size: 1.3rem;"></i>
+                    </div>
+                    <span class="text-secondary fw-semibold small">No Cleared Shipments</span>
+                    <span class="text-muted x-small">Select another month or clear shipments to view breakdown.</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Chart 2: Grouped Bar Chart Comparison -->
+    <div class="col-lg-6 col-md-12">
+        <div class="card border-0 shadow-sm bg-white chart-card d-flex flex-column align-items-center justify-content-center text-center p-3" style="min-height: 280px;">
+            <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3 w-100 text-start">Actual Freight Cost Comparison by Material Category (USD)</h6>
+            @if (ViewBag.TotalClearedCount > 0 || (ViewBag.GroupedChartPrevData != null && ((System.Collections.Generic.List<decimal>)ViewBag.GroupedChartPrevData).Any(v => v > 0)))
+            {
+                <div style="height: 200px; width: 100%; position: relative;">
+                    <canvas id="groupedBarChart"></canvas>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center my-auto">
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                        <i class="bi bi-bar-chart-steps text-muted" style="font-size: 1.3rem;"></i>
+                    </div>
+                    <span class="text-secondary fw-semibold small">No Freight Costs Recorded in Selected or Previous Month</span>
+                    <span class="text-muted x-small">Add freight costs to cleared shipments to compare months.</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Chart 3: Air/Sea Shipment Cost (USD) -->
+    <div class="col-lg-3 col-md-12">
+        <div class="card border-0 shadow-sm bg-white chart-card d-flex flex-column align-items-center justify-content-center text-center p-3" style="min-height: 280px;">
+            <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3 w-100 text-start">Air/Sea Shipment Cost (USD)</h6>
+            @if (ViewBag.TotalClearedCount > 0)
+            {
+                <div style="height: 200px; width: 100%; position: relative;">
+                    <canvas id="costChart"></canvas>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center my-auto">
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                        <i class="bi bi-bar-chart-line text-muted" style="font-size: 1.3rem;"></i>
+                    </div>
+                    <span class="text-secondary fw-semibold small">No Freight Costs Recorded</span>
+                    <span class="text-muted x-small">Select another month or clear shipments to view cost breakdown.</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Recent Shipments -->
+<div class="row g-2 mb-3">
+    <div class="col-lg-12">
+        <div class="card border-0 shadow-sm recent-activity-card overflow-hidden bg-white">
+            <div class="card-header bg-white border-0 py-2.5 px-3">
+                <h6 class="mb-0 fw-bold text-dark">Recently Cleared Shipments</h6>
+                <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold">Cleared shipments in @ViewBag.SelectedMonthName</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-compact mb-0">
+                    <tbody>
+                        @foreach (var item in (System.Collections.Generic.IEnumerable<RpacCommercial.Models.ImportShipment>)ViewBag.RecentImports)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="p-1.5 rounded-2 @(item.Status == "Cleared" ? "bg-success bg-opacity-10 text-success" : "bg-warning bg-opacity-10 text-warning")" style="line-height: 1;">
+                                            <i class="bi @(item.Status == "Cleared" ? "bi-check-circle" : "bi-clock-history") fs-6"></i>
+                                        </div>
+                                        <div>
+                                            <span class="fw-bold text-dark" style="font-size: 0.825rem;">@item.PONumber</span>
+                                            <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold" style="font-size: 0.65rem;">@item.SupplierName</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@item.ShippingMode</td>
+                                <td class="fw-semibold">@item.WeightValue @item.WeightUnit</td>
+                                <td>
+                                    <span class="badge rounded-pill px-2 py-0.5 text-uppercase text-white @(item.Status == "Cleared" ? "bg-success bg-opacity-15 text-success" : "bg-warning bg-opacity-15 text-warning")" style="font-size: 0.6rem;">
+                                        @item.Status
+                                    </span>
+                                </td>
+                                <td class="text-muted text-end pe-3">@item.CreatedAt.ToString("MMM dd, HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        $(document).ready(function() {
+            // Month Selector Change Redirect
+            $('#monthSelector').on('change', function() {
+                var val = $(this).val();
+                window.location.href = '@Url.Action("Index", "Dashboard")?month=' + val;
+            });
+
+            var chartsInitialized = false;
+            function runInitCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                initCharts();
+            }
+
+            // Defer chart drawing until custom fonts are fully loaded to prevent fallback font rendering
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                document.fonts.load('10px Inter').then(function() {
+                    runInitCharts();
+                }).catch(function() {
+                    runInitCharts();
+                });
+                
+                // Fallback timeout after 500ms
+                setTimeout(runInitCharts, 500);
+            } else {
+                runInitCharts();
+            }
+
+            function initCharts() {
+                // Set global Chart.js defaults for perfect aesthetic harmony across all charts
+                Chart.defaults.font.family = 'Inter';
+                Chart.defaults.font.size = 10;
+                Chart.defaults.font.weight = '500';
+                Chart.defaults.color = '#64748b'; // Slate 500
+                
+                // Premium Slate 900 Tooltip styling
+                Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.95)';
+                Chart.defaults.plugins.tooltip.titleFont = { family: 'Inter', size: 10, weight: 'bold' };
+                Chart.defaults.plugins.tooltip.bodyFont = { family: 'Inter', size: 10 };
+                Chart.defaults.plugins.tooltip.padding = 8;
+                Chart.defaults.plugins.tooltip.cornerRadius = 6;
+
+                @if (ViewBag.TotalClearedCount > 0)
+                {
+                    <text>
+                    // Mode Breakdown Chart
+                    var modeLabels = [];
+                    var modeValues = [];
+                    @foreach (var m in (ViewBag.ShippingModes as System.Collections.Generic.IEnumerable<dynamic> ?? new dynamic[0])) {
+                        <text>
+                        modeLabels.push('@m.Label');
+                        modeValues.push(@m.Value);
+                        </text>
+                    }
+
+                    var shippingModeColorMap = {
+                        'Air': 'rgba(225, 29, 45, 0.8)',
+                        'Courier': 'rgba(59, 130, 246, 0.8)',
+                        'Sea': 'rgba(75, 85, 99, 0.8)'
+                    };
+                    var modeColors = modeLabels.map(function(label) {
+                        return shippingModeColorMap[label] || '#94a3b8';
+                    });
+
+                    var ctxMode = document.getElementById('modeChart').getContext('2d');
+                    new Chart(ctxMode, {
+                        type: 'doughnut',
+                        data: {
+                            labels: modeLabels,
+                            datasets: [{
+                                data: modeValues,
+                                backgroundColor: modeColors,
+                                borderWidth: 1,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        boxWidth: 12,
+                                        padding: 15,
+                                        font: { family: 'Inter', size: 10, weight: '500' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Mode Cost Breakdown Chart
+                    var costLabels = [];
+                    var costValues = [];
+                    @foreach (var c in (ViewBag.ShippingModeCosts as System.Collections.Generic.IEnumerable<dynamic> ?? new dynamic[0])) {
+                        <text>
+                        costLabels.push('@c.Label');
+                        costValues.push(@c.Value);
+                        </text>
+                    }
+
+                    var costColors = costLabels.map(function(label) {
+                        return shippingModeColorMap[label] || '#94a3b8';
+                    });
+
+                    var ctxCost = document.getElementById('costChart').getContext('2d');
+                    new Chart(ctxCost, {
+                        type: 'bar',
+                        data: {
+                            labels: costLabels,
+                            datasets: [{
+                                label: 'Freight Cost (USD)',
+                                data: costValues,
+                                backgroundColor: costColors,
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            var label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += '$' + context.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    },
+                                    font: { family: 'Inter', size: 10, weight: '500' }
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { family: 'Inter', size: 10, weight: '500' }
+                                }
+                            }
+                        }
+                    });
+                    </text>
+                }
+
+                @if (ViewBag.TotalClearedCount > 0 || (ViewBag.GroupedChartPrevData != null && ((System.Collections.Generic.List<decimal>)ViewBag.GroupedChartPrevData).Any(v => v > 0)))
+                {
+                    <text>
+                    // Grouped Bar Chart Comparison
+                    var groupedLabels = [];
+                    var groupedCurrentValues = [];
+                    var groupedPrevValues = [];
+
+                    @foreach (var label in (System.Collections.Generic.List<string>)ViewBag.GroupedChartLabels) {
+                        <text>groupedLabels.push('@Html.Raw(label)');</text>
+                    }
+
+                    @foreach (var val in (System.Collections.Generic.List<decimal>)ViewBag.GroupedChartCurrentData) {
+                        <text>groupedCurrentValues.push(@val);</text>
+                    }
+
+                    @foreach (var val in (System.Collections.Generic.List<decimal>)ViewBag.GroupedChartPrevData) {
+                        <text>groupedPrevValues.push(@val);</text>
+                    }
+
+                    var ctxGrouped = document.getElementById('groupedBarChart').getContext('2d');
+                    new Chart(ctxGrouped, {
+                        type: 'bar',
+                        data: {
+                            labels: groupedLabels,
+                            datasets: [
+                                {
+                                    label: '@Html.Raw(ViewBag.GroupedChartCurrentLabel)',
+                                    data: groupedCurrentValues,
+                                    backgroundColor: 'rgba(59, 130, 246, 0.85)', // Premium Blue
+                                    borderColor: 'rgba(59, 130, 246, 1)',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    borderSkipped: false
+                                },
+                                {
+                                    label: '@Html.Raw(ViewBag.GroupedChartPrevLabel)',
+                                    data: groupedPrevValues,
+                                    backgroundColor: 'rgba(16, 185, 129, 0.85)', // Cool Teal/Green
+                                    borderColor: 'rgba(16, 185, 129, 1)',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    borderSkipped: false
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        boxWidth: 12,
+                                        padding: 15,
+                                        font: { family: 'Inter', size: 10, weight: '500' }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            var label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += '$' + context.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(0,0,0,0.05)' },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '$' + value.toLocaleString();
+                                        },
+                                        font: { family: 'Inter', size: 10, weight: '500' }
+                                    }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: {
+                                        font: { family: 'Inter', size: 10, weight: '500' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    </text>
+                }
+            }
+        });
+    </script>
+}

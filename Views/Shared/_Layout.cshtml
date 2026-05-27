@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title</title>
+    <link rel="icon" type="image/png" href="@Url.Content("~/Content/images/logo.png")">
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS (Local) -->
+    <link href="@Url.Content("~/Content/bootstrap.min.css")" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="@Url.Content("~/Content/Site.css?v=1.1")" />
+
+    <!-- Chart.js 4.x -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Highcharts -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .topbar-title-bold { font-weight: 900 !important; letter-spacing: -0.02em; }
+    </style>
+</head>
+
+<body class="bg-light">
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper" class="border-0 shadow-lg" style="background: #0f172a;">
+            <div class="sidebar-heading border-0 py-4 px-4 text-center">
+                <div class="d-flex flex-column align-items-center gap-2">
+                    <img src="@Url.Content("~/Content/images/logo.png")" alt="RPAC Logo"
+                        style="height: 75px; width: auto;">
+                    <div style="height: 2px; width: 50px; background: #e11d48; margin-top: 8px; border-radius: 4px;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-group list-group-flush px-3 py-2 flex-grow-1">
+                <a href="@Url.Action("Index", "Dashboard")"
+                    class="list-group-item list-group-item-action border-0 rounded-4 py-3 mb-1 @(ViewBag.ActiveModule == "Dashboard" ? "active-link" : "text-white-50 bg-transparent")">
+                    <i class="bi bi-grid-1x2-fill me-3"></i>Dashboard
+                </a>
+                <a href="@Url.Action("Index", "Import")"
+                    class="list-group-item list-group-item-action border-0 rounded-4 py-3 mb-1 @(ViewBag.ActiveModule == "Import" ? "active-link" : "text-white-50 bg-transparent")">
+                    <i class="bi bi-box-seam-fill me-3"></i>Import Portal
+                </a>
+                <a href="@Url.Action("Index", "Export")"
+                    class="list-group-item list-group-item-action border-0 rounded-4 py-3 mb-1 @(ViewBag.ActiveModule == "Export" ? "active-link" : "text-white-50 bg-transparent")">
+                    <i class="bi bi-airplane-engines-fill me-3"></i>Export Portal
+                </a>
+                <a href="@Url.Action("Index", "Reports")"
+                    class="list-group-item list-group-item-action border-0 rounded-4 py-3 mb-1 @(ViewBag.ActiveModule == "Reports" ? "active-link" : "text-white-50 bg-transparent")">
+                    <i class="bi bi-graph-up-arrow me-3"></i>Reports & Analytics
+                </a>
+                <a href="@Url.Action("Index", "MasterData")"
+                    class="list-group-item list-group-item-action border-0 rounded-4 py-3 mb-1 @(ViewBag.ActiveModule == "MasterData" ? "active-link" : "text-white-50 bg-transparent")">
+                    <i class="bi bi-database-fill-gear me-3"></i>Master Data
+                </a>
+            </div>
+
+            <div class="mt-auto p-2" style="border-top: 2px solid rgba(255,255,255,0.05);">
+                <div class="d-flex align-items-center gap-2 p-3 rounded-5 transition-all shadow-sm"
+                    style="background: rgba(255, 255, 255, 0.03); border: 1.5px solid rgba(255, 255, 255, 0.08);">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="text-white small fw-bold truncate-text mb-1.5" style="letter-spacing: 0.015em;">
+                            @(RpacCommercial.Helpers.SessionHelper.FullName ?? "User Account")
+                        </div>
+                        <div class="d-flex align-items-center mt-1">
+                            <span class="badge rounded-pill px-2 py-1 text-uppercase tracking-widest"
+                                style="font-size: 0.55rem; background: rgba(225, 29, 72, 0.15); color: #fb7185; border: 1px solid rgba(225, 29, 72, 0.2);">
+                                @RpacCommercial.Helpers.SessionHelper.UserRole
+                            </span>
+                        </div>
+                    </div>
+                    <a href="@Url.Action("Logout", "Account")" class="text-white-50 hover-white transition-all logout-btn"
+                        title="Logout">
+                        <i class="bi bi-box-arrow-right fs-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper" class="flex-grow-1 d-flex flex-column bg-light overflow-auto">
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-3 py-3 sticky-top backdrop-blur bg-opacity-65"
+                style="backdrop-filter: blur(5px);">
+                <div class="container-fluid p-1.5">
+                    <button class="btn btn-light border-0 d-lg-none me-3" id="menu-toggle">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <div>
+                        <h2 class="mb-0 topbar-title-bold text-uppercase">@ViewBag.Title</h2>
+                        <p class="text-muted x-small mb-0 fw-bold"></p>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-4">
+                        <div class="dropdown">
+                            <div class="p-2 bg-light rounded-3 cursor-pointer hover-shadow transition-all position-relative" id="notificationBell" data-bs-toggle="dropdown">
+                                <i class="bi bi-bell text-secondary fs-5"></i>
+                                <span id="notificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light d-none">
+                                    0
+                                </span>
+                            </div>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-3 py-0 overflow-hidden" style="width: 350px;" id="notificationList">
+                                <li class="dropdown-header bg-light py-3 border-bottom d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold">Notifications</h6>
+                                    <span class="badge bg-primary rounded-pill" id="notificationHeaderCount">0 New</span>
+                                </li>
+                                <div id="notificationItems" style="max-height: 400px; overflow-y: auto;">
+                                    <li class="p-4 text-center text-muted small">No new notifications</li>
+                                </div>
+                                <li class="border-top">
+                                    <a class="dropdown-item text-center py-2 x-small fw-bold text-primary" href="#">View All Activity</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="p-4 animate-fade-in">
+                @RenderBody()
+            </div>
+
+            <footer class="py-4 mt-auto">
+                <div class="container-fluid px-6">
+                    <div class="text-center">
+                        <p class="text-muted x-small mb-0 fw-bold uppercase tracking-widest opacity-50">
+                            Copyright &copy; 2026 | r-pac Lanka (Pvt) Ltd
+                        </p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+        <!-- /#page-content-wrapper -->
+    </div>
+
+    @Html.AntiForgeryToken()
+    <!-- Bootstrap Bundle and jQuery (Local) -->
+    <script src="@Url.Content("~/Scripts/jquery-3.6.0.min.js")"></script>
+    <script src="@Url.Content("~/Scripts/bootstrap.bundle.min.js")"></script>
+    <script src="@Url.Content("~/Scripts/site.js")"></script>
+    @RenderSection("scripts", required: false)
+    @RenderSection("Modals", required: false)
+    <script>
+        $(document).ready(function() {
+            function loadNotifications() {
+                $.get('@Url.Action("GetNotifications", "Dashboard")', function(data) {
+                    if (data && data.length > 0) {
+                        $('#notificationCount').text(data.length).removeClass('d-none');
+                        $('#notificationHeaderCount').text(data.length + ' New');
+                        
+                        var itemsHtml = '';
+                        data.forEach(function(item) {
+                            itemsHtml += `
+                                <li class="px-4 py-3 border-bottom hover-bg-light transition-all cursor-pointer" onclick="markRead(${item.AlertId}, this)">
+                                    <div class="d-flex gap-3">
+                                        <div class="flex-shrink-0 mt-1">
+                                            <i class="bi bi-exclamation-circle-fill ${item.AlertType === 'Overdue' ? 'text-danger' : 'text-warning'} fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span class="fw-bold x-small uppercase tracking-wider text-muted">${item.AlertType}</span>
+                                                <span class="text-muted x-small">Just now</span>
+                                            </div>
+                                            <p class="mb-0 small text-dark lh-sm">${item.Message}</p>
+                                        </div>
+                                    </div>
+                                </li>`;
+                        });
+                        $('#notificationItems').html(itemsHtml);
+                    } else {
+                        $('#notificationCount').addClass('d-none');
+                        $('#notificationHeaderCount').text('0 New');
+                        $('#notificationItems').html('<li class="p-4 text-center text-muted small">No new notifications</li>');
+                    }
+                });
+            }
+
+            window.markRead = function(id, element) {
+                $.post('@Url.Action("MarkNotificationRead", "Dashboard")', { id: id }, function() {
+                    $(element).fadeOut(300, function() {
+                        loadNotifications();
+                    });
+                });
+            };
+
+            // Sidebar Department AJAX Loading
+            $('.dept-nav-link').on('click', function(e) {
+                // Only use AJAX if we are already on the ProductionOrder page
+                if (window.location.pathname.toLowerCase().indexOf('productionorder') > -1) {
+                    e.preventDefault();
+                    var dept = $(this).data('dept');
+                    
+                    // Update sidebar UI
+                    $('.dept-nav-link').removeClass('text-white bg-white bg-opacity-10 shadow-sm').addClass('text-white-50 bg-transparent');
+                    $('.dept-nav-link i').css('color', 'rgba(255,255,255,0.2)');
+                    $(this).removeClass('text-white-50 bg-transparent').addClass('text-white bg-white bg-opacity-10 shadow-sm');
+                    $(this).find('i').css('color', '#e11d48');
+                    
+                    // Trigger loadDepartment defined in ProductionOrder/Index
+                    if (typeof window.loadDepartment === 'function') {
+                        window.loadDepartment(dept);
+                    } else {
+                        window.location.href = $(this).attr('href');
+                    }
+                }
+            });
+
+            // Load initially and every 30 seconds only if user is logged in
+            @{
+                if (RpacCommercial.Helpers.SessionHelper.UserId > 0)
+                {
+                    <text>
+                    loadNotifications();
+                    setInterval(loadNotifications, 30000);
+                    </text>
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
+

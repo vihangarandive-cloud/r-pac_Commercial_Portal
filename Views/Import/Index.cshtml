@@ -1,0 +1,301 @@
+@model System.Collections.Generic.IEnumerable<RpacCommercial.Models.ImportShipment>
+@{
+    ViewBag.Title = "Import Management";
+    var userRole = RpacCommercial.Helpers.SessionHelper.UserRole;
+}
+
+<!-- Filters Bar Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4">
+    <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3">Filter Shipments</h6>
+    
+    @using (Html.BeginForm("Index", "Import", FormMethod.Get, new { @class = "row g-3" }))
+    {
+        <div class="col-md-3">
+            <label for="search" class="form-label fw-bold small text-muted">Search Query</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 8px 0 0 8px; border: 1px solid #dee2e6;"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control bg-light border-start-0" id="search" name="search" value="@ViewBag.SearchText" placeholder="Search PO, Supplier, etc..." style="border-radius: 0 8px 8px 0; border: 1px solid #dee2e6; font-size: 0.875rem;">
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label for="supplierId" class="form-label fw-bold small text-muted">Supplier</label>
+            <select class="form-select bg-light" id="supplierId" name="supplierId">
+                <option value="">All Suppliers</option>
+                @foreach (var s in (System.Collections.Generic.IEnumerable<RpacCommercial.Models.Supplier>)ViewBag.Suppliers)
+                {
+                    <option value="@s.SupplierId" @(ViewBag.SelectedSupplierId == s.SupplierId ? "selected" : "")>@s.SupplierName</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="status" class="form-label fw-bold small text-muted">Clearance Status</label>
+            <select class="form-select bg-light" id="status" name="status">
+                <option value="">All Statuses</option>
+                <option value="Pending Clearance" @(ViewBag.SelectedStatus == "Pending Clearance" ? "selected" : "")>Pending Clearance</option>
+                <option value="Cleared" @(ViewBag.SelectedStatus == "Cleared" ? "selected" : "")>Cleared</option>
+            </select>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-rpac-blue rounded-3 w-50 py-2 fw-bold">
+                <i class="bi bi-funnel me-1"></i> Search
+            </button>
+            <a href="@Url.Action("Index")" class="btn btn-light rounded-3 w-50 py-2 fw-bold border text-muted">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Main Datagrid -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 fw-bold text-dark">Logged Import Shipments</h5>
+            <p class="text-muted x-small mb-0 uppercase tracking-widest fw-bold">All Commercial shipments</p>
+        </div>
+        <a href="@Url.Action("Create")" class="btn btn-rpac-red rounded-3 py-2 px-3 fw-bold">
+            <i class="bi bi-plus-circle me-1"></i> Log Import Shipment
+        </a>
+    </div>
+    
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 rounded-0 py-3 px-4 mb-0 d-flex align-items-center gap-2" style="background-color: rgba(16, 185, 129, 0.1); color: #059669;">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <span class="small fw-semibold">@TempData["SuccessMessage"]</span>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 rounded-0 py-3 px-4 mb-0 d-flex align-items-center gap-2" style="background-color: rgba(239, 68, 68, 0.1); color: #dc2626;">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <span class="small fw-semibold">@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 px-4">
+            <thead class="table-light text-muted x-small uppercase tracking-wider">
+                <tr>
+                    <th class="ps-4">PO Number</th>
+                    <th>Supplier</th>
+                    <th>Shipment Requested Date</th>
+                    <th>Mode & Incoterm</th>
+                    <th>Weight</th>
+                    <th>Forwarder Attachments</th>
+                    <th>ETD / ETA</th>
+                    <th>Freight Cost (USD)</th>
+                    <th>Clearance Amt (Actual LKR)</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="small">
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="11" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-50"></i>
+                            No import shipment records found matching criteria.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">@item.PONumber</td>
+                            <td>
+                                <span class="fw-semibold text-dark">@item.SupplierName</span>
+                                @if (!string.IsNullOrEmpty(item.MaterialCategory))
+                                {
+                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                        @foreach (var cat in item.MaterialCategory.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                        {
+                                            <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-0.5" style="font-size: 0.6rem; font-weight: 600;">@cat.Trim()</span>
+                                        }
+                                    </div>
+                                }
+                                <p class="text-muted text-xxs mb-0 mt-0.5">Logged: @item.CreatedAt.ToString("yyyy-MM-dd")</p>
+                            </td>
+                            <td>@item.ShipmentDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary px-2.5 py-0.5" style="font-size: 0.6rem;">@item.ShippingMode</span>
+                                <span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary border border-secondary px-2.5 py-0.5" style="font-size: 0.6rem;">@item.Incoterm</span>
+                            </td>
+                            <td class="fw-semibold">@item.WeightValue @item.WeightUnit</td>
+                             <td>
+                                <div class="d-flex flex-column gap-1">
+                                    @if (!string.IsNullOrEmpty(item.ScanwellQtyPath))
+                                    {
+                                        bool isMsg = item.ScanwellQtyPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                        <a href="@Url.Content(item.ScanwellQtyPath)" class="text-decoration-none x-small fw-bold text-primary" download="@(string.IsNullOrEmpty(item.ScanwellQtyFileName) ? "" : item.ScanwellQtyFileName)" target="_blank">
+                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Scanwell
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.FGXPath))
+                                    {
+                                        bool isMsg = item.FGXPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                        <a href="@Url.Content(item.FGXPath)" class="text-decoration-none x-small fw-bold text-success" download="@(string.IsNullOrEmpty(item.FGXFileName) ? "" : item.FGXFileName)" target="_blank">
+                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>EGX
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.TranswingPath))
+                                    {
+                                        bool isMsg = item.TranswingPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                        <a href="@Url.Content(item.TranswingPath)" class="text-decoration-none x-small fw-bold text-warning" download="@(string.IsNullOrEmpty(item.TranswingFileName) ? "" : item.TranswingFileName)" target="_blank">
+                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Transwing
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.InsurancePath))
+                                    {
+                                        bool isMsg = item.InsurancePath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                        <a href="@Url.Content(item.InsurancePath)" class="text-decoration-none x-small fw-bold text-info" download="@(string.IsNullOrEmpty(item.InsuranceFileName) ? "" : item.InsuranceFileName)" target="_blank">
+                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Insurance
+                                        </a>
+                                    }
+                                    @if (string.IsNullOrEmpty(item.ScanwellQtyPath) && string.IsNullOrEmpty(item.FGXPath) && string.IsNullOrEmpty(item.TranswingPath) && string.IsNullOrEmpty(item.InsurancePath))
+                                    {
+                                        <span class="text-muted x-small italic">No attachments</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="x-small">
+                                    <span class="text-muted fw-bold">ETD:</span> @item.ETD.ToString("yyyy-MM-dd")<br/>
+                                    <span class="text-muted fw-bold">ETA:</span> @item.ETA.ToString("yyyy-MM-dd")
+                                </div>
+                            </td>
+                            <td class="fw-semibold">
+                                @(item.ActualFreightCost.HasValue ? "USD " + item.ActualFreightCost.Value.ToString("N2") : "N/A")
+                                @if (item.ActualFreightCost.HasValue && !string.IsNullOrEmpty(item.ActualFreightCostForwarder))
+                                {
+                                    <p class="text-muted text-xxs fw-bold mb-0">(@item.ActualFreightCostForwarder)</p>
+                                }
+                            </td>
+                            <td class="text-success fw-bold">
+                                @(item.ActualClearanceAmount.HasValue ? "LKR " + item.ActualClearanceAmount.Value.ToString("N2") : "N/A")
+                                @if (item.ApproximateClearanceAmount.HasValue)
+                                {
+                                    <p class="text-muted text-xxs fw-bold mb-0">Approx: LKR @item.ApproximateClearanceAmount.Value.ToString("N2")</p>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill px-2.5 py-1 text-uppercase text-white @(item.Status == "Cleared" ? "bg-success bg-opacity-15 text-success" : "bg-warning bg-opacity-15 text-warning")" style="font-size: 0.65rem;">
+                                    @item.Status
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group gap-1">
+                                    @if (item.Status == "Pending Clearance")
+                                    {
+                                        <button class="btn btn-sm btn-light border rounded-3 px-2 py-1.5 text-success" onclick="clearShipment(@item.ImportId, '@(item.ApproximateClearanceAmount ?? 0)')" title="Clear Shipment">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </button>
+                                    }
+                                    
+                                    <a href="@Url.Action("Edit", new { id = item.ImportId })" class="btn btn-sm btn-light border rounded-3 px-2 py-1.5" title="Edit/Amend">
+                                        <i class="bi bi-pencil-square text-dark"></i>
+                                    </a>
+                                    
+                                    <button class="btn btn-sm btn-light border rounded-3 px-2 py-1.5" onclick="deleteImport(@item.ImportId)" title="Delete">
+                                        <i class="bi bi-trash-fill text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        function clearShipment(id, approxAmount) {
+            Swal.fire({
+                title: 'Clear Shipment',
+                html: `
+                    <div class="text-start">
+                        <div class="mb-3">
+                            <label for="swal-clearance-date" class="form-label fw-bold small text-muted">Clearance Date</label>
+                            <input type="date" id="swal-clearance-date" class="form-control" value="${new Date().toISOString().substring(0, 10)}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="swal-clearance-amount" class="form-label fw-bold small text-muted">Actual Clearance Amount (LKR)</label>
+                            <input type="number" id="swal-clearance-amount" class="form-control text-success fw-bold" placeholder="LKR" value="${approxAmount || ''}">
+                            <div class="form-text x-small mt-1 text-muted">Approximate clearance was LKR ${approxAmount ? parseFloat(approxAmount).toLocaleString('en-US', {minimumFractionDigits: 2}) : 'N/A'}</div>
+                        </div>
+                    </div>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="bi bi-check-circle me-1"></i> Clear Shipment',
+                preConfirm: () => {
+                    const clearanceDate = document.getElementById('swal-clearance-date').value;
+                    const clearanceAmount = document.getElementById('swal-clearance-amount').value;
+                    
+                    if (!clearanceDate) {
+                        Swal.showValidationMessage('Please select a clearance date.');
+                        return false;
+                    }
+                    if (!clearanceAmount || parseFloat(clearanceAmount) < 0) {
+                        Swal.showValidationMessage('Please enter a valid clearance amount.');
+                        return false;
+                    }
+                    return {
+                        clearanceDate: clearanceDate,
+                        actualClearanceAmount: clearanceAmount
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("ClearShipment", "Import")', {
+                        id: id,
+                        clearanceDate: result.value.clearanceDate,
+                        actualClearanceAmount: result.value.actualClearanceAmount
+                    }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Cleared!', res.message, 'success').then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function deleteImport(id) {
+            Swal.fire({
+                title: 'Delete Shipment Record?',
+                text: "Warning: This action is permanent and cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Delete'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("Delete", "Import")', { id: id }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Deleted!', res.message, 'success').then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
