@@ -136,69 +136,121 @@ namespace RpacCommercial.Helpers
                     // Generate the beautiful HTML report content
                     string emailBody = BuildHtmlReport(clearedImports, yesterday, stats, chartCurrentCleared, chartPrevCleared);
 
-                    // Read SMTP configurations from web.config AppSettings
-                    string smtpServer = ConfigurationManager.AppSettings["SmtpServer"] ?? "smtp.office365.com";
-                    int smtpPort = int.Parse(ConfigurationManager.AppSettings["SmtpPort"] ?? "587");
-                    string smtpUser = ConfigurationManager.AppSettings["SmtpUser"] ?? "";
-                    string smtpPassword = ConfigurationManager.AppSettings["SmtpPassword"] ?? "";
-                    string smtpSender = ConfigurationManager.AppSettings["SmtpSender"] ?? smtpUser;
+                    // Read O365 / Microsoft Graph configurations from web.config AppSettings
+                    string tenantId = ConfigurationManager.AppSettings["O365_TenantId"] ?? "";
+                    string clientId = ConfigurationManager.AppSettings["O365_ClientId"] ?? "";
+                    string clientSecret = ConfigurationManager.AppSettings["O365_ClientSecret"] ?? "";
+                    string senderEmail = ConfigurationManager.AppSettings["O365_SenderEmail"] ?? "";
                     string smtpReceiver = ConfigurationManager.AppSettings["SmtpReceiver"] ?? "";
 
-                    if (string.IsNullOrEmpty(smtpUser))
+                    if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(senderEmail))
                     {
                         // Log warning to System Diagnostics Trace if settings are incomplete
-                        System.Diagnostics.Trace.WriteLine("EmailScheduler Warning: SMTP settings are not fully configured in web.config.");
+                        System.Diagnostics.Trace.WriteLine("EmailScheduler Warning: O365/Graph settings are not fully configured in web.config.");
                         return;
                     }
 
-                    // Dispatch Outlook/SMTP mail
-                    using (var mail = new MailMessage())
+                    // Dispatch Outlook/O365 mail via Microsoft Graph API
+                    string emailSubject = string.Format("r-pac Lanka Commercial: Cleared Imports Report ({0:yyyy-MM-dd})", yesterday);
+                    
+                    using (var httpClient = new System.Net.Http.HttpClient())
                     {
-                        mail.From = new MailAddress(smtpSender, "r-pac Commercial Dept");
-                        
+                        // 1. Get Access Token from Microsoft Entra ID (Azure AD)
+                        var tokenUrl = string.Format("https://login.microsoftonline.com/{0}/oauth2/v2.0/token", tenantId);
+                        var tokenRequestParams = new System.Collections.Generic.Dictionary<string, string>
+                        {
+                            { "grant_type", "client_credentials" },
+                            { "client_id", clientId },
+                            { "client_secret", clientSecret },
+                            { "scope", "https://graph.microsoft.com/.default" }
+                        };
+
+                        var tokenResponse = httpClient.PostAsync(tokenUrl, new System.Net.Http.FormUrlEncodedContent(tokenRequestParams)).Result;
+                        tokenResponse.EnsureSuccessStatusCode();
+
+                        var tokenResponseJson = tokenResponse.Content.ReadAsStringAsync().Result;
+                        var tokenData = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(tokenResponseJson);
+                        string accessToken = tokenData.access_token;
+
+                        // 2. Prepare Email Recipients
+                        var toRecipients = new System.Collections.Generic.List<object>();
+                        var ccRecipients = new System.Collections.Generic.List<object>();
+
                         bool hasRecipients = false;
                         foreach (var rec in activeRecipients)
                         {
                             string email = rec.EmailAddress;
                             string type = rec.RecipientType;
+                            var recipientObj = new
+                            {
+                                emailAddress = new
+                                {
+                                    address = email.Trim()
+                                }
+                            };
+
                             if (type.Equals("Cc", StringComparison.OrdinalIgnoreCase))
                             {
-                                mail.CC.Add(new MailAddress(email.Trim()));
+                                ccRecipients.Add(recipientObj);
                             }
                             else
                             {
-                                mail.To.Add(new MailAddress(email.Trim()));
+                                toRecipients.Add(recipientObj);
                                 hasRecipients = true;
                             }
                         }
 
-                        // Fallback to web.config receiver list if no active recipients in database
+                        // Fallback to web.config receiver list if no active recipients
                         if (!hasRecipients && !string.IsNullOrEmpty(smtpReceiver))
                         {
                             var receivers = smtpReceiver.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                             foreach (var receiver in receivers)
                             {
-                                mail.To.Add(new MailAddress(receiver.Trim()));
+                                toRecipients.Add(new
+                                {
+                                    emailAddress = new
+                                    {
+                                        address = receiver.Trim()
+                                    }
+                                });
                             }
                         }
 
-                        if (mail.To.Count == 0)
+                        if (toRecipients.Count == 0)
                         {
                             System.Diagnostics.Trace.WriteLine("EmailScheduler Warning: No recipients configured to send email.");
                             return;
                         }
 
-                        mail.Subject = string.Format("r-pac Lanka Commercial: Cleared Imports Report ({0:yyyy-MM-dd})", yesterday);
-                        mail.Body = emailBody;
-                        mail.IsBodyHtml = true;
-                        mail.BodyEncoding = Encoding.UTF8;
-
-                        using (var client = new SmtpClient(smtpServer, smtpPort))
+                        // 3. Construct Graph JSON Payload
+                        var messagePayload = new
                         {
-                            client.UseDefaultCredentials = false;
-                            client.Credentials = new NetworkCredential(smtpUser, smtpPassword);
-                            client.EnableSsl = true;
-                            client.Send(mail);
+                            message = new
+                            {
+                                subject = emailSubject,
+                                body = new
+                                {
+                                    contentType = "HTML",
+                                    content = emailBody
+                                },
+                                toRecipients = toRecipients,
+                                ccRecipients = ccRecipients
+                            }
+                        };
+
+                        // 4. Post request to Microsoft Graph sendMail endpoint
+                        var sendMailUrl = string.Format("https://graph.microsoft.com/v1.0/users/{0}/sendMail", senderEmail);
+                        var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, sendMailUrl);
+                        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                        
+                        var jsonPayload = Newtonsoft.Json.JsonConvert.SerializeObject(messagePayload);
+                        request.Content = new System.Net.Http.StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+                        var apiResponse = httpClient.SendAsync(request).Result;
+                        if (!apiResponse.IsSuccessStatusCode)
+                        {
+                            var errorDetails = apiResponse.Content.ReadAsStringAsync().Result;
+                            throw new InvalidOperationException(string.Format("Microsoft Graph API returned error code {0}: {1}", apiResponse.StatusCode, errorDetails));
                         }
                     }
 

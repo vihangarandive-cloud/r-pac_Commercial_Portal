@@ -21,7 +21,7 @@ namespace RpacCommercial.Controllers
             _supplierRepository = supplierRepository;
         }
 
-        public ActionResult Index(string status = null, int? supplierId = null, string search = null)
+        public ActionResult Index(string status = null, int? supplierId = null, string search = null, int? page = null)
         {
             ViewBag.ActiveModule = "Import";
             ViewBag.Title = "Import Management";
@@ -30,8 +30,26 @@ namespace RpacCommercial.Controllers
             ViewBag.SelectedSupplierId = supplierId;
             ViewBag.SearchText = search;
 
-            var shipments = _importRepository.GetAllImports(status, null, null, supplierId, search);
-            return View(shipments);
+            var shipments = System.Linq.Enumerable.ToList(_importRepository.GetAllImports(status, null, null, supplierId, search));
+
+            int pageSize = 20;
+            int currentPage = page ?? 1;
+            if (currentPage < 1) currentPage = 1;
+
+            int totalItems = shipments.Count;
+            int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+            
+            // Handle case where currentPage is greater than totalPages
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+
+            var paginatedShipments = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(shipments, (currentPage - 1) * pageSize), pageSize));
+
+            ViewBag.CurrentPage = currentPage;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.PageSize = pageSize;
+
+            return View(paginatedShipments);
         }
 
         [HttpGet]
@@ -51,19 +69,11 @@ namespace RpacCommercial.Controllers
             {
                 try
                 {
-                    // Create Uploads directory if it doesn't exist
-                    string uploadDir = Server.MapPath("~/Uploads/Imports/");
-                    if (!Directory.Exists(uploadDir))
-                    {
-                        Directory.CreateDirectory(uploadDir);
-                    }
-
                     // 1. Scanwell Attachment
                     if (scanwellQtyFile != null && scanwellQtyFile.ContentLength > 0)
                     {
                         string fileName = "Scanwell_" + DateTime.Now.Ticks + Path.GetExtension(scanwellQtyFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        scanwellQtyFile.SaveAs(fullPath);
+                        shipment.ScanwellQtyContent = ReadFileBytes(scanwellQtyFile);
                         shipment.ScanwellQtyPath = "/Uploads/Imports/" + fileName;
                         shipment.ScanwellQtyFileName = scanwellQtyFile.FileName;
                     }
@@ -72,8 +82,7 @@ namespace RpacCommercial.Controllers
                     if (egxFile != null && egxFile.ContentLength > 0)
                     {
                         string fileName = "EGX_" + DateTime.Now.Ticks + Path.GetExtension(egxFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        egxFile.SaveAs(fullPath);
+                        shipment.FGXContent = ReadFileBytes(egxFile);
                         shipment.FGXPath = "/Uploads/Imports/" + fileName;
                         shipment.FGXFileName = egxFile.FileName;
                     }
@@ -82,8 +91,7 @@ namespace RpacCommercial.Controllers
                     if (transwingFile != null && transwingFile.ContentLength > 0)
                     {
                         string fileName = "Transwing_" + DateTime.Now.Ticks + Path.GetExtension(transwingFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        transwingFile.SaveAs(fullPath);
+                        shipment.TranswingContent = ReadFileBytes(transwingFile);
                         shipment.TranswingPath = "/Uploads/Imports/" + fileName;
                         shipment.TranswingFileName = transwingFile.FileName;
                     }
@@ -92,8 +100,7 @@ namespace RpacCommercial.Controllers
                     if (insuranceFile != null && insuranceFile.ContentLength > 0)
                     {
                         string fileName = "Insurance_" + DateTime.Now.Ticks + Path.GetExtension(insuranceFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        insuranceFile.SaveAs(fullPath);
+                        shipment.InsuranceContent = ReadFileBytes(insuranceFile);
                         shipment.InsurancePath = "/Uploads/Imports/" + fileName;
                         shipment.InsuranceFileName = insuranceFile.FileName;
                     }
@@ -171,18 +178,11 @@ namespace RpacCommercial.Controllers
                         shipment.Status = "Pending Clearance";
                     }
 
-                    string uploadDir = Server.MapPath("~/Uploads/Imports/");
-                    if (!Directory.Exists(uploadDir))
-                    {
-                        Directory.CreateDirectory(uploadDir);
-                    }
-
                     // 1. Scanwell Attachment
                     if (scanwellQtyFile != null && scanwellQtyFile.ContentLength > 0)
                     {
                         string fileName = "Scanwell_" + DateTime.Now.Ticks + Path.GetExtension(scanwellQtyFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        scanwellQtyFile.SaveAs(fullPath);
+                        shipment.ScanwellQtyContent = ReadFileBytes(scanwellQtyFile);
                         shipment.ScanwellQtyPath = "/Uploads/Imports/" + fileName;
                         shipment.ScanwellQtyFileName = scanwellQtyFile.FileName;
                     }
@@ -191,8 +191,7 @@ namespace RpacCommercial.Controllers
                     if (egxFile != null && egxFile.ContentLength > 0)
                     {
                         string fileName = "EGX_" + DateTime.Now.Ticks + Path.GetExtension(egxFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        egxFile.SaveAs(fullPath);
+                        shipment.FGXContent = ReadFileBytes(egxFile);
                         shipment.FGXPath = "/Uploads/Imports/" + fileName;
                         shipment.FGXFileName = egxFile.FileName;
                     }
@@ -201,8 +200,7 @@ namespace RpacCommercial.Controllers
                     if (transwingFile != null && transwingFile.ContentLength > 0)
                     {
                         string fileName = "Transwing_" + DateTime.Now.Ticks + Path.GetExtension(transwingFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        transwingFile.SaveAs(fullPath);
+                        shipment.TranswingContent = ReadFileBytes(transwingFile);
                         shipment.TranswingPath = "/Uploads/Imports/" + fileName;
                         shipment.TranswingFileName = transwingFile.FileName;
                     }
@@ -211,8 +209,7 @@ namespace RpacCommercial.Controllers
                     if (insuranceFile != null && insuranceFile.ContentLength > 0)
                     {
                         string fileName = "Insurance_" + DateTime.Now.Ticks + Path.GetExtension(insuranceFile.FileName);
-                        string fullPath = Path.Combine(uploadDir, fileName);
-                        insuranceFile.SaveAs(fullPath);
+                        shipment.InsuranceContent = ReadFileBytes(insuranceFile);
                         shipment.InsurancePath = "/Uploads/Imports/" + fileName;
                         shipment.InsuranceFileName = insuranceFile.FileName;
                     }
@@ -252,6 +249,86 @@ namespace RpacCommercial.Controllers
             }
         }
 
+        [HttpGet]
+        public ActionResult DownloadAttachment(int id, string type)
+        {
+            if (string.IsNullOrEmpty(type))
+            {
+                TempData["ErrorMessage"] = "No attachment type specified.";
+                return RedirectToAction("Index");
+            }
+
+            var shipment = _importRepository.GetImportById(id);
+            if (shipment == null)
+            {
+                TempData["ErrorMessage"] = "The requested shipment record does not exist.";
+                return RedirectToAction("Index");
+            }
+
+            byte[] fileContent = null;
+            string fileName = null;
+            string legacyPath = null;
+
+            if (type.Equals("Scanwell", StringComparison.OrdinalIgnoreCase))
+            {
+                fileContent = shipment.ScanwellQtyContent;
+                fileName = shipment.ScanwellQtyFileName;
+                legacyPath = shipment.ScanwellQtyPath;
+            }
+            else if (type.Equals("EGX", StringComparison.OrdinalIgnoreCase))
+            {
+                fileContent = shipment.FGXContent;
+                fileName = shipment.FGXFileName;
+                legacyPath = shipment.FGXPath;
+            }
+            else if (type.Equals("Transwing", StringComparison.OrdinalIgnoreCase))
+            {
+                fileContent = shipment.TranswingContent;
+                fileName = shipment.TranswingFileName;
+                legacyPath = shipment.TranswingPath;
+            }
+            else if (type.Equals("Insurance", StringComparison.OrdinalIgnoreCase))
+            {
+                fileContent = shipment.InsuranceContent;
+                fileName = shipment.InsuranceFileName;
+                legacyPath = shipment.InsurancePath;
+            }
+
+            // Check if we have the file content in the database (BLOB)
+            if (fileContent != null && fileContent.Length > 0)
+            {
+                string contentType = System.Web.MimeMapping.GetMimeMapping(fileName);
+                if (fileName.EndsWith(".msg", StringComparison.OrdinalIgnoreCase))
+                {
+                    contentType = "application/vnd.ms-outlook";
+                }
+                return File(fileContent, contentType, fileName);
+            }
+
+            // Fallback: If DB content is NULL, check the local disk (backwards compatibility)
+            if (!string.IsNullOrEmpty(legacyPath))
+            {
+                string physicalPath = GetPhysicalPath(legacyPath);
+                if (System.IO.File.Exists(physicalPath))
+                {
+                    string contentType = System.Web.MimeMapping.GetMimeMapping(physicalPath);
+                    if (physicalPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase))
+                    {
+                        contentType = "application/vnd.ms-outlook";
+                    }
+                    string downloadName = !string.IsNullOrEmpty(fileName) ? fileName : Path.GetFileName(physicalPath);
+                    return File(physicalPath, contentType, downloadName);
+                }
+            }
+
+            TempData["ErrorMessage"] = "The requested attachment file could not be found.";
+            if (Request.UrlReferrer != null)
+            {
+                return Redirect(Request.UrlReferrer.ToString());
+            }
+            return RedirectToAction("Index");
+        }
+
         [HttpPost]
         public JsonResult Delete(int id)
         {
@@ -264,6 +341,49 @@ namespace RpacCommercial.Controllers
             {
                 return Json(new { success = false, message = ex.Message });
             }
+        }
+
+        private byte[] ReadFileBytes(HttpPostedFileBase file)
+        {
+            if (file == null || file.ContentLength == 0)
+            {
+                return null;
+            }
+
+            using (var reader = new BinaryReader(file.InputStream))
+            {
+                return reader.ReadBytes(file.ContentLength);
+            }
+        }
+
+        private string GetPhysicalPath(string relativePath)
+        {
+            string normalizedPath = relativePath.Replace("\\", "/");
+            if (normalizedPath.StartsWith("~/"))
+            {
+                normalizedPath = normalizedPath.Substring(1);
+            }
+
+            // Path in current running application directory (bin\app.publish\Uploads\Imports)
+            string runningPath = Server.MapPath("~" + normalizedPath);
+            if (System.IO.File.Exists(runningPath))
+            {
+                return runningPath;
+            }
+
+            // Fallback: if running from bin\app.publish, resolve the file from project root directory
+            string appPath = HttpRuntime.AppDomainAppPath;
+            if (appPath.IndexOf(@"\bin\app.publish", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                string projectRoot = Path.GetFullPath(Path.Combine(appPath, "..", ".."));
+                string fallbackPath = Path.GetFullPath(Path.Combine(projectRoot, normalizedPath.TrimStart('/')));
+                if (System.IO.File.Exists(fallbackPath))
+                {
+                    return fallbackPath;
+                }
+            }
+
+            return runningPath;
         }
     }
 }

@@ -122,7 +122,7 @@
                                 @if (!string.IsNullOrEmpty(Model.InsurancePath))
                                 {
                                     bool isMsg = Model.InsurancePath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                    <a href="@Url.Content(Model.InsurancePath)" class="text-info x-small fw-bold" download="@(string.IsNullOrEmpty(Model.InsuranceFileName) ? "" : Model.InsuranceFileName)" target="_blank">
+                                    <a href="@Url.Action("DownloadAttachment", "Import", new { id = Model.ImportId, type = "Insurance" })" class="text-info x-small fw-bold">
                                         <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
                                     </a>
                                 }
@@ -151,7 +151,7 @@
                                 @if (!string.IsNullOrEmpty(Model.ScanwellQtyPath))
                                 {
                                     bool isMsg = Model.ScanwellQtyPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                    <a href="@Url.Content(Model.ScanwellQtyPath)" class="text-primary x-small fw-bold" download="@(string.IsNullOrEmpty(Model.ScanwellQtyFileName) ? "" : Model.ScanwellQtyFileName)" target="_blank">
+                                    <a href="@Url.Action("DownloadAttachment", "Import", new { id = Model.ImportId, type = "Scanwell" })" class="text-primary x-small fw-bold">
                                         <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
                                     </a>
                                 }
@@ -165,7 +165,7 @@
                                 @if (!string.IsNullOrEmpty(Model.FGXPath))
                                 {
                                     bool isMsg = Model.FGXPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                    <a href="@Url.Content(Model.FGXPath)" class="text-success x-small fw-bold" download="@(string.IsNullOrEmpty(Model.FGXFileName) ? "" : Model.FGXFileName)" target="_blank">
+                                    <a href="@Url.Action("DownloadAttachment", "Import", new { id = Model.ImportId, type = "EGX" })" class="text-success x-small fw-bold">
                                         <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
                                     </a>
                                 }
@@ -179,7 +179,7 @@
                                 @if (!string.IsNullOrEmpty(Model.TranswingPath))
                                 {
                                     bool isMsg = Model.TranswingPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                    <a href="@Url.Content(Model.TranswingPath)" class="text-warning x-small fw-bold" download="@(string.IsNullOrEmpty(Model.TranswingFileName) ? "" : Model.TranswingFileName)" target="_blank">
+                                    <a href="@Url.Action("DownloadAttachment", "Import", new { id = Model.ImportId, type = "Transwing" })" class="text-warning x-small fw-bold">
                                         <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf")"></i> View Current
                                     </a>
                                 }
@@ -194,11 +194,11 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label for="ETD" class="form-label fw-bold small text-muted">ETD (Departure Date)</label>
-                            <input type="date" class="form-control bg-light" id="ETD" name="ETD" value="@Model.ETD.ToString("yyyy-MM-dd")" required>
+                            <input type="date" class="form-control bg-light" id="ETD" name="ETD" value="@(Model.ETD.HasValue ? Model.ETD.Value.ToString("yyyy-MM-dd") : "")">
                         </div>
                         <div class="col-md-4">
                             <label for="ETA" class="form-label fw-bold small text-muted">ETA (Arrival Date)</label>
-                            <input type="date" class="form-control bg-light" id="ETA" name="ETA" value="@Model.ETA.ToString("yyyy-MM-dd")" required>
+                            <input type="date" class="form-control bg-light" id="ETA" name="ETA" value="@(Model.ETA.HasValue ? Model.ETA.Value.ToString("yyyy-MM-dd") : "")">
                         </div>
                         <div class="col-md-4">
                             <label for="ActualFreightCost" class="form-label fw-bold small text-muted">Actual Freight Cost (USD)</label>

@@ -44,13 +44,12 @@ namespace Company.DailyReporter
                     throw new InvalidOperationException("Database Connection String 'MSSQLServer' is missing in configurations.");
                 }
 
-                // Retrieve SMTP configs
-                string smtpServer = configuration["SmtpSettings:Server"] ?? "smtp.office365.com";
-                int smtpPort = int.Parse(configuration["SmtpSettings:Port"] ?? "587");
-                string smtpUser = configuration["SmtpSettings:Username"] ?? "";
-                string smtpPassword = configuration["SmtpSettings:Password"] ?? "";
-                string smtpSenderEmail = configuration["SmtpSettings:SenderEmail"] ?? smtpUser;
-                string smtpSenderName = configuration["SmtpSettings:SenderName"] ?? "r-pac Commercial Dept";
+                // Retrieve Microsoft Graph / O365 configs
+                string tenantId = configuration["O365Settings:TenantId"] ?? "";
+                string clientId = configuration["O365Settings:ClientId"] ?? "";
+                string clientSecret = configuration["O365Settings:ClientSecret"] ?? "";
+                string senderEmail = configuration["O365Settings:SenderEmail"] ?? "";
+                string senderName = configuration["O365Settings:SenderName"] ?? "r-pac Commercial Dept";
 
                 // Retrieve report output temp path
                 string tempDirectory = configuration["ReportSettings:TempDirectory"] ?? @"C:\CompanyReports\Temp\";
@@ -136,9 +135,9 @@ namespace Company.DailyReporter
                 MonthlyStats monthlyStats = GetMonthlyStats(dbConnectionString, yesterday);
                 Console.WriteLine($"Monthly Stats loaded: Total={monthlyStats.TotalCount}, Cleared={monthlyStats.ClearedCount}, Pending={monthlyStats.PendingCount}");
 
-                // 7. Compose and Dispatch Email via SMTP
-                Console.WriteLine($"Connecting to SMTP server {smtpServer}:{smtpPort} via Secure StartTls...");
-                SendEmailReport(smtpServer, smtpPort, smtpUser, smtpPassword, smtpSenderEmail, smtpSenderName, activeRecipients, clearedShipments, yesterday, tempExcelPath, tempMonthlyExcelPath, monthlyStats, chartCurrentCleared, chartPrevCleared);
+                // 7. Compose and Dispatch Email via Microsoft Graph API
+                Console.WriteLine("Connecting to Microsoft Graph API for email dispatch...");
+                SendEmailReport(tenantId, clientId, clientSecret, senderEmail, senderName, activeRecipients, clearedShipments, yesterday, tempExcelPath, tempMonthlyExcelPath, monthlyStats, chartCurrentCleared, chartPrevCleared);
                 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Report successfully generated and emailed!");
@@ -905,78 +904,154 @@ namespace Company.DailyReporter
             return sb.ToString();
         }
 
-        private static void SendEmailReport(string smtpServer, int smtpPort, string smtpUser, string smtpPassword, 
+        private static void SendEmailReport(string tenantId, string clientId, string clientSecret, 
             string senderEmail, string senderName, List<ReportRecipient> recipients, List<ImportShipment> shipments, 
             DateTime reportDate, string dailyAttachmentPath, string monthlyAttachmentPath, MonthlyStats stats, List<ImportShipment> currentMonthCleared, List<ImportShipment> prevMonthCleared)
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(senderName, senderEmail));
-            
-            foreach (var recipient in recipients)
+            if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(senderEmail))
             {
-                var address = new MailboxAddress(recipient.EmailAddress, recipient.EmailAddress);
-                if (recipient.RecipientType.Equals("To", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Microsoft Graph O365 credentials are not fully configured in appsettings.json.");
+            }
+
+            // 1. Get Access Token from Microsoft Entra ID (Azure AD)
+            using (var httpClient = new System.Net.Http.HttpClient())
+            {
+                var tokenUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+                var tokenRequestParams = new Dictionary<string, string>
                 {
-                    message.To.Add(address);
-                }
-                else if (recipient.RecipientType.Equals("Cc", StringComparison.OrdinalIgnoreCase))
+                    { "grant_type", "client_credentials" },
+                    { "client_id", clientId },
+                    { "client_secret", clientSecret },
+                    { "scope", "https://graph.microsoft.com/.default" }
+                };
+
+                var tokenResponse = httpClient.PostAsync(tokenUrl, new FormUrlEncodedContent(tokenRequestParams)).Result;
+                tokenResponse.EnsureSuccessStatusCode();
+
+                var tokenResponseJson = tokenResponse.Content.ReadAsStringAsync().Result;
+                var tokenData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(tokenResponseJson);
+                string accessToken = tokenData!["access_token"]!.GetValue<string>();
+
+                // 2. Prepare Recipients
+                var toRecipients = new List<object>();
+                var ccRecipients = new List<object>();
+
+                bool hasToRecipient = false;
+                foreach (var rec in recipients)
                 {
-                    message.Cc.Add(address);
-                }
-            }
+                    var recipientObj = new
+                    {
+                        emailAddress = new
+                        {
+                            address = rec.EmailAddress.Trim()
+                        }
+                    };
 
-            if (message.To.Count == 0)
-            {
-                Console.WriteLine("Warning: No 'To' recipients resolved. Defaulting the first active recipient to 'To' to avoid SMTP errors.");
-                var firstCc = recipients.FirstOrDefault();
-                if (firstCc != null)
-                {
-                    message.To.Add(new MailboxAddress(firstCc.EmailAddress, firstCc.EmailAddress));
-                }
-            }
-
-            message.Subject = $"r-pac Lanka Commercial: Cleared Imports Report ({reportDate:yyyy-MM-dd})";
-
-            var bodyBuilder = new BodyBuilder
-            {
-                HtmlBody = BuildHtmlReport(shipments, reportDate, stats, currentMonthCleared, prevMonthCleared)
-            };
-
-            // Attach the Excel Reports
-            if (File.Exists(dailyAttachmentPath))
-            {
-                bodyBuilder.Attachments.Add(dailyAttachmentPath);
-            }
-            else
-            {
-                throw new FileNotFoundException("Cannot locate generated Daily Excel report to attach.", dailyAttachmentPath);
-            }
-
-            if (File.Exists(monthlyAttachmentPath))
-            {
-                bodyBuilder.Attachments.Add(monthlyAttachmentPath);
-            }
-            else
-            {
-                throw new FileNotFoundException("Cannot locate generated Monthly Excel report to attach.", monthlyAttachmentPath);
-            }
-
-            message.Body = bodyBuilder.ToMessageBody();
-
-            using (var client = new SmtpClient())
-            {
-                // Accept all SSL certificates (since we are on a private server/test environment)
-                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
-
-                client.Connect(smtpServer, smtpPort, SecureSocketOptions.StartTls);
-                
-                if (!string.IsNullOrEmpty(smtpUser))
-                {
-                    client.Authenticate(smtpUser, smtpPassword);
+                    if (rec.RecipientType.Equals("Cc", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ccRecipients.Add(recipientObj);
+                    }
+                    else
+                    {
+                        toRecipients.Add(recipientObj);
+                        hasToRecipient = true;
+                    }
                 }
 
-                client.Send(message);
-                client.Disconnect(true);
+                if (!hasToRecipient && recipients.Any())
+                {
+                    Console.WriteLine("Warning: No 'To' recipients resolved. Defaulting the first active recipient to 'To' to avoid errors.");
+                    var firstCc = recipients.First();
+                    toRecipients.Add(new
+                    {
+                        emailAddress = new
+                        {
+                            address = firstCc.EmailAddress.Trim()
+                        }
+                    });
+                }
+
+                if (toRecipients.Count == 0)
+                {
+                    throw new InvalidOperationException("No recipients configured to send email.");
+                }
+
+                // 3. Prepare Attachments
+                var attachments = new List<object>();
+
+                if (File.Exists(dailyAttachmentPath))
+                {
+                    byte[] fileBytes = File.ReadAllBytes(dailyAttachmentPath);
+                    string base64Content = Convert.ToBase64String(fileBytes);
+                    attachments.Add(new
+                    {
+                        odataType = "#microsoft.graph.fileAttachment",
+                        name = Path.GetFileName(dailyAttachmentPath),
+                        contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        contentBytes = base64Content
+                    });
+                }
+                else
+                {
+                    throw new FileNotFoundException("Cannot locate generated Daily Excel report to attach.", dailyAttachmentPath);
+                }
+
+                if (File.Exists(monthlyAttachmentPath))
+                {
+                    byte[] fileBytes = File.ReadAllBytes(monthlyAttachmentPath);
+                    string base64Content = Convert.ToBase64String(fileBytes);
+                    attachments.Add(new
+                    {
+                        odataType = "#microsoft.graph.fileAttachment",
+                        name = Path.GetFileName(monthlyAttachmentPath),
+                        contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        contentBytes = base64Content
+                    });
+                }
+                else
+                {
+                    throw new FileNotFoundException("Cannot locate generated Monthly Excel report to attach.", monthlyAttachmentPath);
+                }
+
+                // 4. Construct Graph API JSON Payload
+                var emailSubject = $"r-pac Lanka Commercial: Cleared Imports Report ({reportDate:yyyy-MM-dd})";
+                var emailBody = BuildHtmlReport(shipments, reportDate, stats, currentMonthCleared, prevMonthCleared);
+
+                var messagePayload = new
+                {
+                    message = new
+                    {
+                        subject = emailSubject,
+                        body = new
+                        {
+                            contentType = "HTML",
+                            content = emailBody
+                        },
+                        toRecipients = toRecipients,
+                        ccRecipients = ccRecipients,
+                        attachments = attachments
+                    }
+                };
+
+                // 5. Post to Microsoft Graph sendMail endpoint
+                var sendMailUrl = $"https://graph.microsoft.com/v1.0/users/{senderEmail}/sendMail";
+                var request = new HttpRequestMessage(HttpMethod.Post, sendMailUrl);
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(messagePayload)
+                                             .Replace("\"odataType\"", "\"@odata.type\"");
+
+                var stringContent = new StringContent(jsonPayload, Encoding.UTF8);
+                stringContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+                request.Content = stringContent;
+
+                Console.WriteLine($"Dispatching email report via Microsoft Graph API for {senderEmail}...");
+                var apiResponse = httpClient.SendAsync(request).Result;
+                if (!apiResponse.IsSuccessStatusCode)
+                {
+                    var errorDetails = apiResponse.Content.ReadAsStringAsync().Result;
+                    throw new InvalidOperationException($"Microsoft Graph API returned error code {apiResponse.StatusCode}: {errorDetails}");
+                }
             }
         }
     }
@@ -993,8 +1068,8 @@ namespace Company.DailyReporter
         public decimal WeightValue { get; set; }
         public string WeightUnit { get; set; } = string.Empty;
         public string? MaterialCategory { get; set; }
-        public DateTime ETD { get; set; }
-        public DateTime ETA { get; set; }
+        public DateTime? ETD { get; set; }
+        public DateTime? ETA { get; set; }
         public decimal? ActualFreightCost { get; set; }
         public string? ActualFreightCostForwarder { get; set; }
         public DateTime? ClearanceDate { get; set; }

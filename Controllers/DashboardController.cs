@@ -69,8 +69,8 @@ namespace RpacCommercial.Controllers
             ViewBag.TotalClearedCount = clearedImports.Count();
 
             // Count summary widgets
-            ViewBag.TotalCount = _importRepository.GetTotalCount(); // Overall logged count for global perspective
-            ViewBag.PendingClearanceCount = _importRepository.GetPendingClearanceCount(); // Overall pending actual clearance
+            ViewBag.TotalCount = _importRepository.GetTotalCountByMonth(year, monthVal); // Logged count for selected month scope
+            ViewBag.PendingClearanceCount = _importRepository.GetPendingClearanceCountByMonth(year, monthVal); // Pending actual clearance for selected month scope
 
             decimal monthlyClearance;
             decimal monthlyFreight;
@@ -135,7 +135,15 @@ namespace RpacCommercial.Controllers
 
             var allCategoriesList = currentFreightByCategory.Keys.Union(prevFreightByCategory.Keys).ToList();
 
-            ViewBag.GroupedChartLabels = allCategoriesList;
+            var mappedLabels = allCategoriesList.Select(cat => {
+                if (cat.Equals("Paper Board", StringComparison.OrdinalIgnoreCase)) return "Paper Brd";
+                if (cat.Equals("Satin Ribbon", StringComparison.OrdinalIgnoreCase)) return "Satin Rbn";
+                if (cat.Equals("Ink/Chemical/Ink Foil", StringComparison.OrdinalIgnoreCase)) return "Ink/Chem";
+                if (cat.Equals("Accessories", StringComparison.OrdinalIgnoreCase)) return "Accessory";
+                return cat;
+            }).ToList();
+
+            ViewBag.GroupedChartLabels = mappedLabels;
             ViewBag.GroupedChartCurrentData = allCategoriesList.Select(cat => currentFreightByCategory.ContainsKey(cat) ? currentFreightByCategory[cat] : 0m).ToList();
             ViewBag.GroupedChartPrevData = allCategoriesList.Select(cat => prevFreightByCategory.ContainsKey(cat) ? prevFreightByCategory[cat] : 0m).ToList();
             ViewBag.GroupedChartCurrentLabel = "Current Month (" + targetDate.ToString("MMM yyyy") + ")";

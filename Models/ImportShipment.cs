@@ -33,24 +33,28 @@ namespace RpacCommercial.Models
         // 7. Scanwell Qty (Email attachment)
         public string ScanwellQtyPath { get; set; }
         public string ScanwellQtyFileName { get; set; }
+        public byte[] ScanwellQtyContent { get; set; }
         
         // 8. FGX (Email attachment)
         public string FGXPath { get; set; }
         public string FGXFileName { get; set; }
+        public byte[] FGXContent { get; set; }
         
         // 9. Transwing (Email attachment)
         public string TranswingPath { get; set; }
         public string TranswingFileName { get; set; }
+        public byte[] TranswingContent { get; set; }
         
         // Insurance (Email attachment)
         public string InsurancePath { get; set; }
         public string InsuranceFileName { get; set; }
+        public byte[] InsuranceContent { get; set; }
         
         // 10. ETD (date)
-        public DateTime ETD { get; set; }
+        public DateTime? ETD { get; set; }
         
         // 11. ETA (date)
-        public DateTime ETA { get; set; }
+        public DateTime? ETA { get; set; }
         
         // 12. Actual Freight Cost (Type)
         public decimal? ActualFreightCost { get; set; }

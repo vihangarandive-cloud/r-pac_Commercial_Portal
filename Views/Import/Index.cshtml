@@ -4,6 +4,25 @@
     var userRole = RpacCommercial.Helpers.SessionHelper.UserRole;
 }
 
+<style>
+    .pagination .page-item.active .page-link {
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #fff !important;
+    }
+    .pagination .page-link {
+        color: #475569;
+        border-radius: 6px !important;
+        margin: 0 2px;
+        border: 1px solid #dee2e6;
+        padding: 5px 10px;
+    }
+    .pagination .page-link:hover {
+        color: #dc2626;
+        background-color: #f8fafc;
+    }
+</style>
+
 <!-- Filters Bar Card -->
 <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4">
     <h6 class="text-muted x-small uppercase tracking-widest fw-bold mb-3">Filter Shipments</h6>
@@ -129,45 +148,45 @@
                             </td>
                             <td class="fw-semibold">@item.WeightValue @item.WeightUnit</td>
                              <td>
-                                <div class="d-flex flex-column gap-1">
-                                    @if (!string.IsNullOrEmpty(item.ScanwellQtyPath))
-                                    {
-                                        bool isMsg = item.ScanwellQtyPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                        <a href="@Url.Content(item.ScanwellQtyPath)" class="text-decoration-none x-small fw-bold text-primary" download="@(string.IsNullOrEmpty(item.ScanwellQtyFileName) ? "" : item.ScanwellQtyFileName)" target="_blank">
-                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Scanwell
-                                        </a>
-                                    }
-                                    @if (!string.IsNullOrEmpty(item.FGXPath))
-                                    {
-                                        bool isMsg = item.FGXPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                        <a href="@Url.Content(item.FGXPath)" class="text-decoration-none x-small fw-bold text-success" download="@(string.IsNullOrEmpty(item.FGXFileName) ? "" : item.FGXFileName)" target="_blank">
-                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>EGX
-                                        </a>
-                                    }
-                                    @if (!string.IsNullOrEmpty(item.TranswingPath))
-                                    {
-                                        bool isMsg = item.TranswingPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                        <a href="@Url.Content(item.TranswingPath)" class="text-decoration-none x-small fw-bold text-warning" download="@(string.IsNullOrEmpty(item.TranswingFileName) ? "" : item.TranswingFileName)" target="_blank">
-                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Transwing
-                                        </a>
-                                    }
-                                    @if (!string.IsNullOrEmpty(item.InsurancePath))
-                                    {
-                                        bool isMsg = item.InsurancePath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
-                                        <a href="@Url.Content(item.InsurancePath)" class="text-decoration-none x-small fw-bold text-info" download="@(string.IsNullOrEmpty(item.InsuranceFileName) ? "" : item.InsuranceFileName)" target="_blank">
-                                            <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Insurance
-                                        </a>
-                                    }
-                                    @if (string.IsNullOrEmpty(item.ScanwellQtyPath) && string.IsNullOrEmpty(item.FGXPath) && string.IsNullOrEmpty(item.TranswingPath) && string.IsNullOrEmpty(item.InsurancePath))
-                                    {
-                                        <span class="text-muted x-small italic">No attachments</span>
-                                    }
-                                </div>
-                            </td>
+                                 <div class="d-flex flex-column gap-1">
+                                     @if (!string.IsNullOrEmpty(item.ScanwellQtyPath))
+                                     {
+                                         bool isMsg = item.ScanwellQtyPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                         <a href="@Url.Action("DownloadAttachment", "Import", new { id = item.ImportId, type = "Scanwell" })" class="text-decoration-none x-small fw-bold text-primary">
+                                             <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Scanwell
+                                         </a>
+                                     }
+                                     @if (!string.IsNullOrEmpty(item.FGXPath))
+                                     {
+                                         bool isMsg = item.FGXPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                         <a href="@Url.Action("DownloadAttachment", "Import", new { id = item.ImportId, type = "EGX" })" class="text-decoration-none x-small fw-bold text-success">
+                                             <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>EGX
+                                         </a>
+                                     }
+                                     @if (!string.IsNullOrEmpty(item.TranswingPath))
+                                     {
+                                         bool isMsg = item.TranswingPath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                         <a href="@Url.Action("DownloadAttachment", "Import", new { id = item.ImportId, type = "Transwing" })" class="text-decoration-none x-small fw-bold text-warning">
+                                             <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Transwing
+                                         </a>
+                                     }
+                                     @if (!string.IsNullOrEmpty(item.InsurancePath))
+                                     {
+                                         bool isMsg = item.InsurancePath.EndsWith(".msg", StringComparison.OrdinalIgnoreCase);
+                                         <a href="@Url.Action("DownloadAttachment", "Import", new { id = item.ImportId, type = "Insurance" })" class="text-decoration-none x-small fw-bold text-info">
+                                             <i class="@(isMsg ? "bi bi-envelope" : "bi bi-file-earmark-pdf") me-1"></i>Insurance
+                                         </a>
+                                     }
+                                     @if (string.IsNullOrEmpty(item.ScanwellQtyPath) && string.IsNullOrEmpty(item.FGXPath) && string.IsNullOrEmpty(item.TranswingPath) && string.IsNullOrEmpty(item.InsurancePath))
+                                     {
+                                         <span class="text-muted x-small italic">No attachments</span>
+                                     }
+                                 </div>
+                             </td>
                             <td>
                                 <div class="x-small">
-                                    <span class="text-muted fw-bold">ETD:</span> @item.ETD.ToString("yyyy-MM-dd")<br/>
-                                    <span class="text-muted fw-bold">ETA:</span> @item.ETA.ToString("yyyy-MM-dd")
+                                    <span class="text-muted fw-bold">ETD:</span> @(item.ETD.HasValue ? item.ETD.Value.ToString("yyyy-MM-dd") : "N/A")<br/>
+                                    <span class="text-muted fw-bold">ETA:</span> @(item.ETA.HasValue ? item.ETA.Value.ToString("yyyy-MM-dd") : "N/A")
                                 </div>
                             </td>
                             <td class="fw-semibold">
@@ -213,6 +232,68 @@
             </tbody>
         </table>
     </div>
+
+    @if (ViewBag.TotalPages > 1)
+    {
+        var currentPage = (int)ViewBag.CurrentPage;
+        var totalPages = (int)ViewBag.TotalPages;
+        var totalItems = (int)ViewBag.TotalItems;
+        var pageSize = (int)ViewBag.PageSize;
+        var startItem = (currentPage - 1) * pageSize + 1;
+        var endItem = Math.Min(currentPage * pageSize, totalItems);
+
+        <div class="card-footer bg-white border-0 py-3 px-4 d-flex flex-column flex-sm-row align-items-center justify-content-between border-top gap-3">
+            <div class="text-muted small">
+                Showing <span class="fw-semibold text-dark">@startItem</span> to <span class="fw-semibold text-dark">@endItem</span> of <span class="fw-semibold text-dark">@totalItems</span> shipments
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, search = ViewBag.SearchText, page = currentPage - 1 })" aria-label="Previous">
+                            <span aria-hidden="true">&laquo; Prev</span>
+                        </a>
+                    </li>
+
+                    @{
+                        int startPage = Math.Max(1, currentPage - 2);
+                        int endPage = Math.Min(totalPages, currentPage + 2);
+                    }
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, search = ViewBag.SearchText, page = 1 })">1</a>
+                        </li>
+                        if (startPage > 2)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                    }
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, search = ViewBag.SearchText, page = i })">@i</a>
+                        </li>
+                    }
+                    @if (endPage < totalPages)
+                    {
+                        if (endPage < totalPages - 1)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, search = ViewBag.SearchText, page = totalPages })">@totalPages</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { status = ViewBag.SelectedStatus, supplierId = ViewBag.SelectedSupplierId, search = ViewBag.SearchText, page = currentPage + 1 })" aria-label="Next">
+                            <span aria-hidden="true">Next &raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
 </div>
 
 @section scripts {

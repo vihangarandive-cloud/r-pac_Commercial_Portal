@@ -83,17 +83,21 @@ namespace RpacCommercial.Repositories
             {
                 string sql = @"INSERT INTO Imports (
                                 ShipmentDate, PONumber, SupplierId, ShippingMode, Incoterm, 
-                                WeightValue, WeightUnit, MaterialCategory, ScanwellQtyPath, ScanwellQtyFileName, 
-                                FGXPath, FGXFileName, TranswingPath, TranswingFileName, 
-                                InsurancePath, InsuranceFileName,
+                                WeightValue, WeightUnit, MaterialCategory, 
+                                ScanwellQtyPath, ScanwellQtyFileName, ScanwellQtyContent,
+                                FGXPath, FGXFileName, FGXContent, 
+                                TranswingPath, TranswingFileName, TranswingContent,
+                                InsurancePath, InsuranceFileName, InsuranceContent,
                                 ETD, ETA, ActualFreightCost, ActualFreightCostForwarder, ApproximateFreightCost, ClearanceDate, 
                                 ApproximateClearanceAmount, ActualClearanceAmount, Remarks, 
                                 Status, CreatedBy, CreatedAt
                                ) VALUES (
                                 @ShipmentDate, @PONumber, @SupplierId, @ShippingMode, @Incoterm, 
-                                @WeightValue, @WeightUnit, @MaterialCategory, @ScanwellQtyPath, @ScanwellQtyFileName, 
-                                @FGXPath, @FGXFileName, @TranswingPath, @TranswingFileName, 
-                                @InsurancePath, @InsuranceFileName,
+                                @WeightValue, @WeightUnit, @MaterialCategory, 
+                                @ScanwellQtyPath, @ScanwellQtyFileName, @ScanwellQtyContent,
+                                @FGXPath, @FGXFileName, @FGXContent, 
+                                @TranswingPath, @TranswingFileName, @TranswingContent,
+                                @InsurancePath, @InsuranceFileName, @InsuranceContent,
                                 @ETD, @ETA, @ActualFreightCost, @ActualFreightCostForwarder, @ApproximateFreightCost, @ClearanceDate, 
                                 @ApproximateClearanceAmount, @ActualClearanceAmount, @Remarks, 
                                 CASE WHEN @ClearanceDate IS NOT NULL THEN 'Cleared' ELSE 'Pending Clearance' END, @CreatedBy, GETDATE()
@@ -118,12 +122,16 @@ namespace RpacCommercial.Repositories
                                 MaterialCategory = @MaterialCategory,
                                 ScanwellQtyPath = ISNULL(@ScanwellQtyPath, ScanwellQtyPath),
                                 ScanwellQtyFileName = ISNULL(@ScanwellQtyFileName, ScanwellQtyFileName),
+                                ScanwellQtyContent = ISNULL(@ScanwellQtyContent, ScanwellQtyContent),
                                 FGXPath = ISNULL(@FGXPath, FGXPath),
                                 FGXFileName = ISNULL(@FGXFileName, FGXFileName),
+                                FGXContent = ISNULL(@FGXContent, FGXContent),
                                 TranswingPath = ISNULL(@TranswingPath, TranswingPath),
                                 TranswingFileName = ISNULL(@TranswingFileName, TranswingFileName),
+                                TranswingContent = ISNULL(@TranswingContent, TranswingContent),
                                 InsurancePath = ISNULL(@InsurancePath, InsurancePath),
                                 InsuranceFileName = ISNULL(@InsuranceFileName, InsuranceFileName),
+                                InsuranceContent = ISNULL(@InsuranceContent, InsuranceContent),
                                 ETD = @ETD, 
                                 ETA = @ETA, 
                                 ActualFreightCost = @ActualFreightCost, 
@@ -366,6 +374,28 @@ namespace RpacCommercial.Repositories
             {
                 string sql = "SELECT COUNT(*) FROM Imports WITH (NOLOCK) WHERE ClearanceDate IS NULL";
                 return conn.ExecuteScalar<int>(sql);
+            }
+        }
+
+        public int GetPendingClearanceCountByMonth(int year, int month)
+        {
+            using (var conn = MSSQLHelper.GetConnection())
+            {
+                string sql = @"SELECT COUNT(*) FROM Imports WITH (NOLOCK) 
+                               WHERE ClearanceDate IS NULL 
+                               AND YEAR(ShipmentDate) = @Year AND MONTH(ShipmentDate) = @Month";
+                return conn.ExecuteScalar<int>(sql, new { Year = year, Month = month });
+            }
+        }
+
+        public int GetTotalCountByMonth(int year, int month)
+        {
+            using (var conn = MSSQLHelper.GetConnection())
+            {
+                string sql = @"SELECT COUNT(*) FROM Imports WITH (NOLOCK) 
+                               WHERE (ClearanceDate IS NOT NULL AND YEAR(ClearanceDate) = @Year AND MONTH(ClearanceDate) = @Month)
+                               OR (ClearanceDate IS NULL AND YEAR(ShipmentDate) = @Year AND MONTH(ShipmentDate) = @Month)";
+                return conn.ExecuteScalar<int>(sql, new { Year = year, Month = month });
             }
         }
     }

@@ -300,8 +300,8 @@
                             @if (ViewBag.ActiveTab == "pending")
                             {
                                 <td>
-                                    <span class="text-muted">ETD:</span> @item.ETD.ToString("yyyy-MM-dd")<br/>
-                                    <span class="text-muted">ETA:</span> @item.ETA.ToString("yyyy-MM-dd")
+                                    <span class="text-muted">ETD:</span> @(item.ETD.HasValue ? item.ETD.Value.ToString("yyyy-MM-dd") : "N/A")<br/>
+                                    <span class="text-muted">ETA:</span> @(item.ETA.HasValue ? item.ETA.Value.ToString("yyyy-MM-dd") : "N/A")
                                 </td>
                                 <td class="text-warning fw-bold">@(item.ApproximateClearanceAmount.HasValue ? "LKR " + item.ApproximateClearanceAmount.Value.ToString("N2") : "N/A")</td>
                             }

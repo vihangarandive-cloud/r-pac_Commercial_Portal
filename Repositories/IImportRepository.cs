@@ -36,6 +36,8 @@ namespace RpacCommercial.Repositories
         IEnumerable<dynamic> GetShippingModeBreakdownByMonth(int year, int month);
         IEnumerable<dynamic> GetWeightUnitBreakdownByMonth(int year, int month);
         IEnumerable<dynamic> GetShippingModeCostBreakdownByMonth(int year, int month);
+        int GetPendingClearanceCountByMonth(int year, int month);
+        int GetTotalCountByMonth(int year, int month);
         int GetPendingClearanceCount();
     }
 }
