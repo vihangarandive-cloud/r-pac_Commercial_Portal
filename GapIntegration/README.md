@@ -41,6 +41,7 @@ The automation itself is largely fine. What breaks when it is merged into SO-GEN
 | 13 | Build works locally, fails on a rebuilt server | `requirements.txt` had no versions — a fresh `pip install` picks the newest Starlette / sse-starlette | compatible ranges |
 | 14 | Everything answered `500.19` (or `500.0`) right after deploying `8a22893` | that commit switched the handler to `modules="AspNetCoreModuleV2"`; the module only exists after the ASP.NET Core **Hosting Bundle 2.2+** is installed on the server | `hostingModel="OutOfProcess"` kept explicit + install checklist in section 3 |
 | 15 | `ERROR: No POs successfully added to cart. Details: P2608760: … {"type":"e","status":false,"message":"Failed to add to shopping cart, please try again later!"}` | that sentence is the portal's catch-all, not a validation message. It is also what the portal answers when the PO is **already in the cart** — the old code emptied the cart inside `except: pass` and never looked at the result, so one failed `bulk-delete` made every later add fail — when `__RequestVerificationToken` is empty, and when the session expires mid-run | `clear_cart()` checks and verifies the delete (naming the POs that are stuck), `cart_token()` refuses to start with an empty token, a `401` during `to-job` re-logs in and retries once, and the rejection now echoes the payload fields (`brand`, `style`, `gender`, `type`, `season`, `lpn`, `details`) plus `diagnose.py <PO>` for the full request/response. A rejection is also **retried automatically** with the ids taken from the PO head and then with the ids resolved from the dropdown APIs (`GAP_PAYLOAD_VARIANT` pins whichever one the portal accepts) |
+| 16 | The error text reads `Oops...` / `P2608760: API status=false \| {"type":"e","status":false,…}` | **This repository cannot print that.** `API status` and `Oops` occur in no blob of `19f586c` or `8a22893` and in no file of the current tree; this code reports the same rejection as `add-to-cart rejected: … [brand=…, variants tried: n (…)]`. The worker answering `/gap` is a build that exists only on that server (hand-copied folder, second site, scheduled task or console window) | `find-gap-copies.ps1` finds it (IIS paths, every `portal_api.py` sha, every file containing `API status`, running `python` processes) and `-Quarantine -Force` stops its pool, removes the IIS application and renames the folder, so the next deploy is provably the one answering |
 
 ### Verified against the live portal
 
@@ -58,7 +59,9 @@ answer `401` — i.e. they exist and only need authentication.
    `python -c "import portal_api; print(portal_api.SOURCE_SHA)"` run **in the deployed folder**.
    A different hash (or no `portal_api_sha` field at all) means IIS is still running an older
    copy — no code change can show up until that is fixed (recycle the app pool, check the
-   `Web.config` `processPath`, delete `__pycache__`).
+   `Web.config` `processPath`, delete `__pycache__`). If the page's error text contains
+   `API status` or `Oops`, it is not this code at all (row 16): run `.\find-gap-copies.ps1`
+   instead of publishing again.
 2. The same health response now contains a `runtime` block (also written to the log at startup):
    interpreter, `site-packages`, working directory, `.env` found/missing, `logs/` writable,
    package versions and any missing file. Compare it with the block printed by
@@ -159,6 +162,10 @@ A normal SO-GEN publish already copies the folder now (`GapIntegration\**` is a 
 prove which file the worker imported. That is exactly what `deploy-gap.ps1` adds, so use it after
 the publish (or instead of the manual robocopy below).
 
+If the page still shows `API status=false` after a deploy, nothing below is the problem: that text
+is not in this repository at all, so run `.\find-gap-copies.ps1` (next subsection) before spending
+another publish on it.
+
 `https://so-gen/gap/api/health` is the receipt. Do this every time, in this order:
 
 ```powershell
@@ -201,9 +208,40 @@ error, failed `pip`). Nothing is reported as deployed on the strength of a `robo
 
 ### Finding the copy that is actually running
 
-When `/api/health` reports a `portal_api_sha` that does not match any file you know about, stop
-copying and locate the file instead — the message on screen names a line of code, and that line
-exists in exactly one file per machine:
+The failure text identifies its own author. **No file in this repository prints `API status`** — not
+`19f586c`, not `8a22893`, not the current tree (searched: all 96 blobs plus `*.py`, `*.pyc`,
+`*.cshtml`, `*.js`). This code reports the same rejection as
+
+```
+add-to-cart rejected: Failed to add to shopping cart, please try again later!
+[brand=Gap, style=…, gender=…, type=…, season=…, lpn=NO, priceTicket=<none>, details=…,
+ itemHeadId=…, token=ok, variants tried: 3 (as-sent: …; po-head: …; resolved-ids: …)]
+- run `python diagnose.py P2608760` for the full request/response
+```
+
+So while `P2608760: API status=false | {…}` is on screen, the browser is talking to a different
+build and no edit to this folder can change the answer. Locate it first:
+
+```powershell
+cd C:\inetpub\<site>\GapIntegration
+.\find-gap-copies.ps1                       # read-only report
+.\find-gap-copies.ps1 -Quarantine -Force    # retire the copy that is answering /gap
+```
+
+The report lists every IIS application with its physical path, what `<HealthUrl>` (default
+`http://localhost/gap/api/health`) actually answers, every `portal_api.py` with its sha1 (the same
+value `/api/health` calls `portal_api_sha`) and last write time, every `.py`/`.pyc` that contains
+`API status`, and every running `python` process with its command line — so a second site, a
+scheduled task or a console window left running cannot hide.
+
+`-Quarantine` destroys nothing: it stops that application's pool, removes the IIS application and
+renames the folder to `<name>.stale-<timestamp>`. `/gap` then falls through to the SO-GEN MVC app
+(404) until `install-gap-iis.ps1` + `deploy-gap.ps1` put this copy in place, so a stale worker can
+no longer answer while you believe you are testing the new one. Exit codes: `0` clean, `1` a foreign
+copy exists (or, with `-Quarantine` but without `-Force`, only the plan was printed), `2` pre-check
+failed.
+
+Doing it by hand, if you prefer:
 
 ```powershell
 # every portal_api.py on the box, newest last
@@ -273,8 +311,19 @@ These are product decisions, not bugs — deliberately **not** changed here:
   the job log then prints `WARNING: … returned no originalQuantity`; check the ordered quantity
   on the portal before printing. This is the one part of the new feature that a real run has to
   confirm.
-* **Unused leftovers.** `master_info.json` (264 KB), `wwwroot/lib` (Bootstrap), `wwwroot/js/site.js`,
-  `.config/dotnet-tools.json` (from an abandoned .NET port) are not referenced by the app.
+* **Unused leftovers, dropped.** `master_info.json` (264 KB), `wwwroot/lib` (Bootstrap),
+  `wwwroot/js/site.js`, `wwwroot/css/site.css`, `wwwroot/favicon.ico`, the pre-`wwwroot` `static/`
+  folder and `.config/dotnet-tools.json` (from an abandoned .NET port) are not referenced by the
+  app — `index.html` is self-contained and loads only `wwwroot/static/images/rpac_logo.png` — so this
+  folder no longer carries them. They are left out of `gap-fixes-vs-8a22893.patch` on purpose (they
+  are 80 k lines of vendored jQuery/Bootstrap and would bury the diff); delete them once, either by
+  hand or with:
+
+  ```powershell
+  Remove-Item -Recurse -Force .config, master_info.json, static, wwwroot\css, wwwroot\js, wwwroot\lib, wwwroot\favicon.ico
+  ```
+
+  `deploy-gap.ps1` mirrors with `/MIR`, so it also removes the copies already on the server.
 
 ---
 
@@ -326,6 +375,14 @@ These are product decisions, not bugs — deliberately **not** changed here:
 * `install-gap-iis.ps1` is idempotent by construction (`list` → `add` or `set`), refuses to run
   without `app.py`, warns when `-Alias` differs from `GAP_BASE_PATH`, and exits `3` when the venv
   does not exist yet. Not executed here (no Windows/IIS in this environment).
+* `find-gap-copies.ps1` turns the "which copy is running" question into one command: it parses
+  `appcmd list vdir` into name/physical-path pairs, hashes every `portal_api.py` the way
+  `_source_sha()` does (SHA-1 of the file bytes, first 12 hex chars), reads `.py` **and** `.pyc` as
+  bytes so a bytecode-only folder is still caught, and lists running `python` processes with their
+  command line. Its `-Quarantine` branch only touches IIS applications whose folder contains
+  `API status`, which the copy shipped here never does, so it cannot retire the good copy; it stops
+  the pool, removes the application and renames the folder, and refuses to run without `-Force`.
+  Not executed here (no Windows/IIS in this environment).
 * Live portal probed read-only (login page + 8 endpoints) — see section 1.
 
 Not verified: a real job against the portal (no `GAP_PASSWORD` in this environment) and the
