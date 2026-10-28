@@ -180,6 +180,21 @@
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
+  <!--
+    The GAP Brands tool is a Python (FastAPI) application that IIS hosts as a
+    sub-application with the alias "gap", physical folder GapIntegration.
+    Without these items a Web Deploy of SO-GEN publishes only the MVC app: the
+    publish reports success, /gap keeps running whatever was copied there by
+    hand, and no code fix can take effect. The exclusions keep the developer's
+    venv, bytecode and .env out of the package - the server owns its .env and
+    builds its own venv (see GapIntegration\deploy-gap.ps1). logs\*.log is
+    skipped but the folder itself ships: IIS needs somewhere to write.
+  -->
+  <ItemGroup>
+    <Content Include="GapIntegration\**\*"
+             Exclude="GapIntegration\venv\**;GapIntegration\__pycache__\**;GapIntegration\.git\**;GapIntegration\**\*.pyc;GapIntegration\**\*.pyo;GapIntegration\.env;GapIntegration\logs\*.log" />
+  </ItemGroup>
+
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != '' And Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets')" />
